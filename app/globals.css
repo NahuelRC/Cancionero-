@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink:     #14171c;
+  --color-ink-2:   #1c2026;
+  --color-ink-3:   #262b33;
+  --color-sidebar: #101317;
+  --color-cream:   #f4f1e8;
+  --color-amber:   #e8a33d;
+  --color-teal:    #4f8a7b;
+  --color-line:    #3a3f47;
+  --color-muted:   #8b9099;
+  --color-danger:  #d9694f;
+
+  --font-sans:    var(--font-ibm-plex-sans);
+  --font-serif:   var(--font-fraunces);
+  --font-mono:    var(--font-ibm-plex-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #0b0c0e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: #f4f1e8;
+  font-family: var(--font-ibm-plex-sans), 'IBM Plex Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3a3f47; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a4f57; }
+
+/* Print styles */
+@media print {
+  /* Hide everything except the song content */
+  nav, aside, [data-sidebar], header,
+  .print-hidden { display: none !important; }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Let the song content expand to full page */
+  html, body, #__next, main {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Chord color readable on white */
+  .text-\[\#e8a33d\] { color: #b07000 !important; }
+  .text-\[\#4f8a7b\] { color: #2a5a4f !important; }
+  .text-\[\#e7e4da\], .text-\[\#f4f1e8\], .text-\[\#c9cdd3\] { color: #111 !important; }
+
+  /* Remove dark backgrounds */
+  .bg-\[\#1c2026\], .bg-\[\#262b33\], .bg-\[\#101317\] {
+    background: transparent !important;
+  }
+
+  /* Ensure monospace text renders correctly */
+  .font-mono { font-family: 'Courier New', monospace !important; }
 }
