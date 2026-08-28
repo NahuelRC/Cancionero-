@@ -7,6 +7,7 @@ import { Usuario } from '@/models/Usuario'
 import { Iglesia } from '@/models/Iglesia'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
@@ -50,12 +51,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
 
-    Google({
-      clientId:     process.env.AUTH_GOOGLE_ID!,
+    ...(process.env.AUTH_GOOGLE_ID ? [Google({
+      clientId:     process.env.AUTH_GOOGLE_ID,
       clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-      // Google OAuth requires an iglesiaSlug to be resolved separately;
-      // handled via the sign-in callback below.
-    }),
+    })] : []),
   ],
 
   callbacks: {
