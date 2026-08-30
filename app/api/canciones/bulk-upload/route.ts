@@ -4,7 +4,11 @@ import { toApiError } from '@/lib/errors'
 import { parseBulkDocx } from '@/lib/chords/bulk-parser'
 import { rateLimit, getIp } from '@/lib/ratelimit'
 
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,8 +23,8 @@ export async function POST(req: NextRequest) {
     await requireTenant(['admin', 'musico'])
 
     const formData = await req.formData()
-    const file = formData.get('file') as File | null
-    if (!file) {
+    const file = formData.get('file')
+    if (!(file instanceof File)) {
       return NextResponse.json({ ok: false, message: 'No se envió archivo' }, { status: 422 })
     }
 
@@ -33,8 +37,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Solo se aceptan archivos .docx para importación masiva' }, { status: 422 })
     }
 
+    if (file.type && file.type !== DOCX_MIME && file.type !== 'application/octet-stream') {
+      return NextResponse.json({ ok: false, message: 'Tipo de archivo no permitido' }, { status: 422 })
+    }
+
     const buffer = await file.arrayBuffer()
-    const songs  = await parseBulkDocx(buffer)
+    let songs
+    try {
+      songs = await parseBulkDocx(buffer)
+    } catch (err) {
+      console.error('[bulk-upload:parse]', err)
+      return NextResponse.json(
+        { ok: false, message: 'No se pudo leer el .docx. Verificá que sea un documento Word válido y no esté protegido.' },
+        { status: 422 },
+      )
+    }
 
     if (songs.length === 0) {
       return NextResponse.json(

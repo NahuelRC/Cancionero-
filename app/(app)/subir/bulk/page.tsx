@@ -19,7 +19,7 @@ export default function BulkSubirPage() {
 
   // ── Upload ────────────────────────────────────────────────────────────────
 
-  async function handleFile(file: File) {
+  const handleFile = useCallback(async (file: File) => {
     if (!file.name.endsWith('.docx')) {
       setError('Solo se aceptan archivos .docx')
       return
@@ -30,9 +30,22 @@ export default function BulkSubirPage() {
       const fd = new FormData()
       fd.append('file', file)
       const res  = await fetch('/api/canciones/bulk-upload', { method: 'POST', body: fd })
-      const json = await res.json()
-      if (!json.ok) { setError(json.message); return }
-      const parsed: BulkParsedSong[] = json.data.songs
+      const text = await res.text()
+      let json: { ok?: boolean; message?: string; data?: { songs: BulkParsedSong[] } } | null = null
+      try {
+        json = text ? JSON.parse(text) : null
+      } catch {
+        json = null
+      }
+      if (!res.ok || !json?.ok) {
+        setError(json?.message ?? `Error al procesar el archivo (${res.status})`)
+        return
+      }
+      const parsed = json.data?.songs
+      if (!Array.isArray(parsed)) {
+        setError(`Respuesta inválida del servidor (${res.status})`)
+        return
+      }
       setSongs(parsed)
       setSelected(new Set(parsed.map((_, i) => i)))
       setStep('preview')
@@ -41,13 +54,13 @@ export default function BulkSubirPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
     if (file) handleFile(file)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleFile])
 
   // ── Selection ─────────────────────────────────────────────────────────────
 

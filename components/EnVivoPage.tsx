@@ -38,6 +38,7 @@ export function EnVivoPage({ initialState, user }: Props) {
 
   const isAdmin      = user.rol === 'admin'
   const canNavigate  = user.rol !== 'multimedia'
+  const { canciones, cancionActivaIdx } = evState
 
   const fetchState = useCallback(async () => {
     try {
@@ -47,24 +48,30 @@ export function EnVivoPage({ initialState, user }: Props) {
     } catch { /* silent */ }
   }, [])
 
-  const fetchSong = useCallback(async (cancionId: string, tono: Tonalidad) => {
+  const loadSong = useCallback(async (cancionId: string, tono: Tonalidad): Promise<SongData> => {
     try {
       const res  = await fetch(`/api/canciones/${cancionId}?tono=${tono}`)
       const json = await res.json()
-      if (json.ok) setSong(json.data)
-    } catch { /* silent */ }
+      return json.ok ? json.data : null
+    } catch {
+      return null
+    }
   }, [])
 
   // Load song when active index or state changes
   useEffect(() => {
-    const { canciones, cancionActivaIdx } = evState
-    if (cancionActivaIdx >= 0 && cancionActivaIdx < canciones.length) {
-      const item = canciones[cancionActivaIdx]
-      fetchSong(item.cancionId, item.tono)
-    } else {
-      setSong(null)
-    }
-  }, [evState.cancionActivaIdx, evState.canciones, fetchSong]) // eslint-disable-line react-hooks/exhaustive-deps
+    const item = cancionActivaIdx >= 0 && cancionActivaIdx < canciones.length
+      ? canciones[cancionActivaIdx]
+      : null
+    let cancelled = false
+
+    void (async () => {
+      const nextSong = item ? await loadSong(item.cancionId, item.tono) : null
+      if (!cancelled) setSong(nextSong)
+    })()
+
+    return () => { cancelled = true }
+  }, [cancionActivaIdx, canciones, loadSong])
 
   // Real-time updates via SSE; fall back to polling if EventSource is unavailable
   useEffect(() => {
@@ -398,7 +405,7 @@ function SetListPanel({
               {isAdmin && (
                 <select
                   value={item.tono}
-                  onChange={(e) => patch({ op: 'updateTono', idx, tono: e.target.value as Tonalidad })}
+                  onChange={(e) => patch({ op: 'setTono', idx, tono: e.target.value as Tonalidad })}
                   disabled={loading}
                   onClick={(e) => e.stopPropagation()}
                   className="bg-[#262b33] border border-[#3a3f47] text-[#e8a33d] text-[10px] rounded-md px-1 py-0.5 outline-none flex-shrink-0 cursor-pointer disabled:opacity-50"

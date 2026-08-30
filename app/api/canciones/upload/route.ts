@@ -6,6 +6,9 @@ import { rateLimit, getIp } from '@/lib/ratelimit'
 import { uploadFile } from '@/lib/storage'
 import { randomUUID } from 'crypto'
 
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 
 export async function POST(req: NextRequest) {

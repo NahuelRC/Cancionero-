@@ -22,6 +22,7 @@ export default function SubirPage() {
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState<string | null>(null)
+  const [manualText, setManualText] = useState('')
 
   // Form fields
   const [titulo, setTitulo]   = useState('')
@@ -31,6 +32,26 @@ export default function SubirPage() {
   const [compas, setCompas]   = useState('')
   const [tags, setTags]       = useState('')
 
+  async function readUploadResponse(res: Response): Promise<ParseResult> {
+    const text = await res.text()
+    let json: { ok?: boolean; message?: string; data?: ParseResult } | null = null
+    try {
+      json = text ? JSON.parse(text) : null
+    } catch {
+      json = null
+    }
+    if (!res.ok || !json?.ok || !json.data) {
+      throw new Error(json?.message ?? `Error al procesar el archivo (${res.status})`)
+    }
+    return json.data
+  }
+
+  function applyParsed(nextParsed: ParseResult, fallbackTitle?: string) {
+    setParsed(nextParsed)
+    if (nextParsed.detectedKey) setTono(nextParsed.detectedKey)
+    if (!titulo && fallbackTitle) setTitulo(fallbackTitle)
+  }
+
   async function processFile(file: File) {
     setError(null)
     setUploading(true)
@@ -39,11 +60,36 @@ export default function SubirPage() {
       const fd = new FormData()
       fd.append('file', file)
       const res  = await fetch('/api/canciones/upload', { method: 'POST', body: fd })
-      const json = await res.json()
-      if (!json.ok) { setError(json.message); return }
-      setParsed(json.data)
-      if (json.data.detectedKey) setTono(json.data.detectedKey)
-      if (!titulo) setTitulo(file.name.replace(/\.[^.]+$/, ''))
+      const data = await readUploadResponse(res)
+      applyParsed(data, file.name.replace(/\.[^.]+$/, ''))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al procesar el archivo')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function processManualText() {
+    if (!manualText.trim()) {
+      setError('Escribí la canción antes de procesarla')
+      return
+    }
+    setError(null)
+    setUploading(true)
+    setFileName(null)
+    try {
+      const fd = new FormData()
+      const file = new File([manualText], 'cancion.txt', { type: 'text/plain' })
+      fd.append('file', file)
+      const res = await fetch('/api/canciones/upload', { method: 'POST', body: fd })
+      const data = await readUploadResponse(res)
+      const firstLine = manualText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find((line) => line && !/^\[.+\]$/.test(line))
+      applyParsed(data, firstLine)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al procesar el texto')
     } finally {
       setUploading(false)
     }
@@ -147,7 +193,7 @@ export default function SubirPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-serif font-semibold text-[18px] m-0">Subir canción</h2>
-            <p className="text-[12px] text-[#8b9099] mt-0.5">Formato Word (.docx) o texto plano (.txt) con acordes sobre la letra</p>
+            <p className="text-[12px] text-[#8b9099] mt-0.5">Archivo .docx, .txt o escritura manual</p>
           </div>
           <Link href="/subir/bulk" className="text-[12px] text-[#e8a33d] hover:underline flex-shrink-0">
             📚 Importar cancionero completo →
@@ -169,9 +215,35 @@ export default function SubirPage() {
           <span className="block text-[26px] mb-2">⇪</span>
           {uploading ? 'Procesando…' : fileName
             ? `Archivo cargado: ${fileName}`
-            : 'Arrastrá tu archivo .docx acá, o hacé clic para elegirlo'}
+            : 'Arrastrá tu archivo .docx o .txt acá, o hacé clic para elegirlo'}
         </div>
-        <input ref={fileRef} type="file" accept=".docx,.txt" className="hidden" onChange={handleFileChange} />
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".docx,.txt,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        <div className="mb-[18px] bg-[#1c2026] border border-[#3a3f47] rounded-[10px] p-4">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h3 className="font-serif font-semibold text-[15px] m-0">Escribir canción</h3>
+            <button
+              type="button"
+              onClick={processManualText}
+              disabled={uploading || !manualText.trim()}
+              className="px-[14px] py-[7px] rounded-lg bg-[#4f8a7b] text-[#061b15] font-medium text-[12px] cursor-pointer disabled:opacity-60"
+            >
+              {uploading ? 'Procesando…' : 'Procesar texto'}
+            </button>
+          </div>
+          <textarea
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            placeholder={'[Verso 1]\nD              A\nSendas Dios hará\nG              D\nDonde piensas que no hay'}
+            className="w-full min-h-[240px] px-3 py-3 rounded-lg border border-[#3a3f47] bg-[#101317] text-[#f4f1e8] font-mono text-[13px] leading-relaxed outline-none focus:border-[#e8a33d] resize-y"
+          />
+        </div>
 
         {error && (
           <div className="mb-4 text-[12.5px] text-[#d9694f] bg-[#d9694f]/10 border border-[#d9694f]/30 rounded-lg px-3 py-2">
@@ -285,17 +357,6 @@ function EditableLine({
     setAddPos(nextPosition())
     setAddChord('')
     setAdding(true)
-  }
-
-  // Build the chord row string for display (non-editing)
-  function buildChordRow(): string {
-    if (chords.length === 0) return ''
-    let row = ''
-    for (const c of chords) {
-      while (row.length < c.position) row += ' '
-      row += c.chord
-    }
-    return row
   }
 
   function startEdit(ci: number) {
