@@ -49,8 +49,7 @@ export default function RegisterClient() {
         return
       }
 
-      // Auto-redirect to login with slug pre-filled
-      router.push(`/login?slug=${json.data.slug}&registered=1`)
+      router.push('/login?registered=1')
     } finally {
       setLoading(false)
     }

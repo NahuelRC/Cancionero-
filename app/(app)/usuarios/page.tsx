@@ -1,38 +1,45 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { UserRole } from '@/types'
+import type { TenantUserRole } from '@/types'
 
 interface UsuarioDTO {
   id: string
   nombre: string
   email: string
-  rol: UserRole
+  rol: TenantUserRole
   activo: boolean
 }
 
-const ROL_LABEL: Record<UserRole, string> = {
-  admin:      'Administrador',
-  musico:     'Músico',
-  multimedia: 'Multimedia',
+const ROL_LABEL: Record<TenantUserRole, string> = {
+  ADMIN:      'Administrador',
+  MUSICIAN:   'Músico',
+  MULTIMEDIA: 'Multimedia',
 }
+const INVITABLE_ROLES: TenantUserRole[] = ['MUSICIAN', 'MULTIMEDIA', 'ADMIN']
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios]     = useState<UsuarioDTO[]>([])
   const [loading, setLoading]       = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRol, setInviteRol]   = useState<UserRole>('musico')
+  const [inviteRol, setInviteRol]   = useState<TenantUserRole>('MUSICIAN')
   const [sending, setSending]       = useState(false)
   const [feedback, setFeedback]     = useState<{ type: 'ok' | 'err'; msg: string } | null>(null)
 
-  async function fetchUsuarios() {
-    const res  = await fetch('/api/usuarios')
-    const json = await res.json()
-    if (json.ok) setUsuarios(json.data)
-    setLoading(false)
-  }
+  useEffect(() => {
+    let cancelled = false
 
-  useEffect(() => { fetchUsuarios() }, [])
+    fetch('/api/usuarios')
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled && json.ok) setUsuarios(json.data)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [])
 
   async function sendInvite(e: React.FormEvent) {
     e.preventDefault()
@@ -56,7 +63,7 @@ export default function UsuariosPage() {
     }
   }
 
-  async function changeRol(id: string, rol: UserRole) {
+  async function changeRol(id: string, rol: TenantUserRole) {
     await fetch(`/api/usuarios/${id}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -94,12 +101,12 @@ export default function UsuariosPage() {
           />
           <select
             value={inviteRol}
-            onChange={(e) => setInviteRol(e.target.value as UserRole)}
+            onChange={(e) => setInviteRol(e.target.value as TenantUserRole)}
             className="px-[10px] py-[9px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13px] outline-none"
           >
-            <option value="musico">Músico</option>
-            <option value="multimedia">Multimedia</option>
-            <option value="admin">Administrador</option>
+            {INVITABLE_ROLES.map((rol) => (
+              <option key={rol} value={rol}>{ROL_LABEL[rol]}</option>
+            ))}
           </select>
           <button
             type="submit"
@@ -141,12 +148,12 @@ export default function UsuariosPage() {
                   <td className="px-[10px] py-[10px] border-b border-[#3a3f47]">
                     <select
                       value={u.rol}
-                      onChange={(e) => changeRol(u.id, e.target.value as UserRole)}
+                      onChange={(e) => changeRol(u.id, e.target.value as TenantUserRole)}
                       className="bg-[#262b33] text-[#f4f1e8] border border-[#3a3f47] rounded-md px-2 py-1 text-[12.5px]"
                     >
-                      <option value="admin">Administrador</option>
-                      <option value="musico">Músico</option>
-                      <option value="multimedia">Multimedia</option>
+                      {INVITABLE_ROLES.map((rol) => (
+                        <option key={rol} value={rol}>{ROL_LABEL[rol]}</option>
+                      ))}
                     </select>
                   </td>
                   <td className="px-[10px] py-[10px] border-b border-[#3a3f47]">

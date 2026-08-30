@@ -36,7 +36,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await ctx.params
-    const user = await requireTenant(['admin', 'musico'])
+    const user = await requireTenant(['ADMIN', 'MUSICIAN'])
     const body = await req.json()
     const parsed = PatchSchema.safeParse(body)
     if (!parsed.success) {
@@ -56,7 +56,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await ctx.params
-    const user = await requireTenant(['admin'])
+    const user = await requireTenant(['ADMIN'])
     await deleteCancion(user, id)
     void logAction(user, 'cancion.delete', { id, type: 'Cancion' })
     return NextResponse.json({ ok: true, data: null })

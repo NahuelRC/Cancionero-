@@ -43,8 +43,10 @@ export async function POST(req: NextRequest) {
       nombre,
       email:        email.toLowerCase(),
       passwordHash,
-      rol:          'admin',
+      rol:          'ADMIN',
       activo:       true,
+      status:       'ACTIVE',
+      onboardingStatus: 'COMPLETED',
     })
 
     return NextResponse.json({ ok: true, data: { slug } }, { status: 201 })

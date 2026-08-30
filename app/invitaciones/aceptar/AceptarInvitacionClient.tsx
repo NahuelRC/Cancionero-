@@ -32,7 +32,7 @@ export default function AceptarInvitacionClient() {
         return
       }
 
-      router.push(`/login?iglesiaSlug=${json.data.iglesiaSlug}`)
+      router.push('/login?registered=1')
     } finally {
       setLoading(false)
     }

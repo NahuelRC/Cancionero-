@@ -1,7 +1,7 @@
 import 'server-only'
 import mongoose, { Document, Schema, Types } from 'mongoose'
 import { connectDB } from './db'
-import type { SessionUser } from '@/types'
+import type { TenantSessionUser } from '@/types'
 
 type AuditAction =
   | 'cancion.delete'
@@ -44,7 +44,7 @@ const AuditLog =
   mongoose.model<IAuditLog>('AuditLog', AuditLogSchema)
 
 export async function logAction(
-  user: SessionUser,
+  user: TenantSessionUser,
   action: AuditAction,
   target?: { id?: string; type?: string; meta?: Record<string, unknown> },
 ): Promise<void> {

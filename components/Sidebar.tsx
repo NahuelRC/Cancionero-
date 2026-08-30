@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import type { SessionUser } from '@/types'
 
@@ -19,7 +19,6 @@ interface Props {
 
 export function Sidebar({ user, iglesiaName }: Props) {
   const pathname = usePathname()
-  const router   = useRouter()
 
   const initials = user.nombre
     .split(' ')
@@ -29,9 +28,10 @@ export function Sidebar({ user, iglesiaName }: Props) {
     .toUpperCase()
 
   const rolLabel: Record<string, string> = {
-    admin:      'Administrador',
-    musico:     'Músico',
-    multimedia: 'Multimedia',
+    SUPER_ADMIN: 'Super admin',
+    ADMIN:       'Administrador',
+    MUSICIAN:    'Músico',
+    MULTIMEDIA:  'Multimedia',
   }
 
   return (
@@ -44,9 +44,9 @@ export function Sidebar({ user, iglesiaName }: Props) {
       <nav className="flex flex-col gap-0.5">
         {NAV_ITEMS.map(({ href, label, icon }) => {
           // Hide Usuarios from non-admins
-          if (href === '/usuarios' && user.rol !== 'admin') return null
+          if (href === '/usuarios' && user.rol !== 'ADMIN') return null
           // Hide Subir from multimedia
-          if (href === '/subir' && user.rol === 'multimedia') return null
+          if (href === '/subir' && user.rol === 'MULTIMEDIA') return null
 
           const active = pathname.startsWith(href)
           return (
@@ -92,8 +92,8 @@ export function MobileBottomNav({ user }: { user: SessionUser }) {
   const pathname = usePathname()
 
   const visibleItems = NAV_ITEMS.filter(({ href }) => {
-    if (href === '/usuarios' && user.rol !== 'admin') return false
-    if (href === '/subir' && user.rol === 'multimedia') return false
+    if (href === '/usuarios' && user.rol !== 'ADMIN') return false
+    if (href === '/subir' && user.rol === 'MULTIMEDIA') return false
     return true
   })
 
