@@ -19,6 +19,16 @@ const Schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    if (process.env.ALLOW_DIRECT_REGISTER !== 'true') {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: 'PAYMENT_REQUIRED',
+        },
+        { status: 402 },
+      )
+    }
+
     const body   = await req.json()
     const parsed = Schema.safeParse(body)
     if (!parsed.success) {
@@ -43,8 +53,10 @@ export async function POST(req: NextRequest) {
       nombre,
       email:        email.toLowerCase(),
       passwordHash,
-      rol:          'admin',
+      rol:          'ADMIN',
       activo:       true,
+      status:       'ACTIVE',
+      onboardingStatus: 'COMPLETED',
     })
 
     return NextResponse.json({ ok: true, data: { slug } }, { status: 201 })

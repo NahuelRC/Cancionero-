@@ -1,16 +1,65 @@
 import type { Types } from 'mongoose'
 
-// ─── Roles ────────────────────────────────────────────────────────────────────
+// Roles
 
-export type UserRole = 'admin' | 'musico' | 'multimedia'
+export const USER_ROLES = ['SUPER_ADMIN', 'ADMIN', 'MUSICIAN', 'MULTIMEDIA'] as const
+export const TENANT_USER_ROLES = ['ADMIN', 'MUSICIAN', 'MULTIMEDIA'] as const
+export const LEGACY_USER_ROLES = ['admin', 'musico', 'multimedia'] as const
 
-// ─── Session ──────────────────────────────────────────────────────────────────
+export type UserRole = (typeof USER_ROLES)[number]
+export type TenantUserRole = (typeof TENANT_USER_ROLES)[number]
+export type LegacyUserRole = (typeof LEGACY_USER_ROLES)[number]
+export type StoredUserRole = UserRole | LegacyUserRole
+
+export const USER_STATUS = ['INVITED', 'ACTIVE', 'SUSPENDED', 'DISABLED'] as const
+export const ONBOARDING_STATUS = ['PENDING', 'COMPLETED'] as const
+export const ORGANIZATION_STATUS = ['PENDING', 'ACTIVE', 'SUSPENDED', 'CANCELLED'] as const
+export const SUBSCRIPTION_STATUS = ['PENDING', 'ACTIVE', 'PAST_DUE', 'EXPIRED', 'CANCELLED'] as const
+export const INVITATION_STATUS = ['PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED'] as const
+
+export type UserStatus = (typeof USER_STATUS)[number]
+export type OnboardingStatus = (typeof ONBOARDING_STATUS)[number]
+export type OrganizationStatus = (typeof ORGANIZATION_STATUS)[number]
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUS)[number]
+export type InvitationStatus = (typeof INVITATION_STATUS)[number]
+
+export function normalizeRole(role: StoredUserRole | string | null | undefined): UserRole | null {
+  switch (role) {
+    case 'SUPER_ADMIN':
+    case 'ADMIN':
+    case 'MUSICIAN':
+    case 'MULTIMEDIA':
+      return role
+    case 'admin':
+      return 'ADMIN'
+    case 'musico':
+      return 'MUSICIAN'
+    case 'multimedia':
+      return 'MULTIMEDIA'
+    default:
+      return null
+  }
+}
+
+export function isTenantRole(role: UserRole | null | undefined): role is TenantUserRole {
+  return role === 'ADMIN' || role === 'MUSICIAN' || role === 'MULTIMEDIA'
+}
+
+// Session
 
 export interface SessionUser {
   id: string
   nombre: string
   email: string
   rol: UserRole
+  iglesiaId?: string | null
+  iglesiaSlug?: string | null
+  status?: UserStatus
+  onboardingStatus?: OnboardingStatus
+}
+
+export interface TenantSessionUser extends SessionUser {
+  rol: TenantUserRole
   iglesiaId: string
   iglesiaSlug: string
 }

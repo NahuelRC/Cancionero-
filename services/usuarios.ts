@@ -2,13 +2,17 @@ import 'server-only'
 import { connectDB } from '@/lib/db'
 import { Usuario } from '@/models/Usuario'
 import { ForbiddenError, NotFoundError, ConflictError } from '@/lib/errors'
-import type { SessionUser, UserRole } from '@/types'
+import {
+  normalizeRole,
+  type TenantSessionUser,
+  type TenantUserRole,
+} from '@/types'
 
 export interface UsuarioDTO {
   id: string
   nombre: string
   email: string
-  rol: UserRole
+  rol: TenantUserRole
   activo: boolean
   createdAt: string
 }
@@ -18,14 +22,14 @@ function toDTO(doc: InstanceType<typeof Usuario>): UsuarioDTO {
     id:        doc._id.toString(),
     nombre:    doc.nombre,
     email:     doc.email,
-    rol:       doc.rol,
+    rol:       normalizeRole(doc.rol) as TenantUserRole,
     activo:    doc.activo,
     createdAt: doc.createdAt.toISOString(),
   }
 }
 
-export async function listUsuarios(user: SessionUser): Promise<UsuarioDTO[]> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+export async function listUsuarios(user: TenantSessionUser): Promise<UsuarioDTO[]> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
   const docs = await Usuario.find({ iglesiaId: user.iglesiaId }).sort({ nombre: 1 })
@@ -33,11 +37,11 @@ export async function listUsuarios(user: SessionUser): Promise<UsuarioDTO[]> {
 }
 
 export async function updateUsuarioRol(
-  user: SessionUser,
+  user: TenantSessionUser,
   targetId: string,
-  newRol: UserRole,
+  newRol: TenantUserRole,
 ): Promise<UsuarioDTO> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
   if (user.id === targetId) throw new ForbiddenError('No puedes cambiar tu propio rol')
 
   await connectDB()
@@ -52,8 +56,8 @@ export async function updateUsuarioRol(
   return toDTO(doc)
 }
 
-export async function deactivateUsuario(user: SessionUser, targetId: string): Promise<void> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+export async function deactivateUsuario(user: TenantSessionUser, targetId: string): Promise<void> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
   if (user.id === targetId) throw new ForbiddenError('No puedes desactivarte a ti mismo')
 
   await connectDB()

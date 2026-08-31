@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
         { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
       )
     }
-    await requireTenant(['admin', 'musico'])
+    await requireTenant(['ADMIN', 'MUSICIAN'])
 
     const formData = await req.formData()
     const file = formData.get('file') as File | null

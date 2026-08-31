@@ -6,7 +6,7 @@ import { transposeSections } from '@/lib/chords/transpose'
 import type {
   CancionDTO,
   CancionSinAcordesDTO,
-  SessionUser,
+  TenantSessionUser,
   PaginatedResponse,
   SongSection,
   Tonalidad,
@@ -49,7 +49,7 @@ function escapeRegex(s: string): string {
 }
 
 export async function listCanciones(
-  user: SessionUser,
+  user: TenantSessionUser,
   opts: { page?: number; pageSize?: number; q?: string; tags?: string[]; sort?: string } = {},
 ): Promise<PaginatedResponse<CancionDTO | CancionSinAcordesDTO>> {
   await connectDB()
@@ -74,7 +74,7 @@ export async function listCanciones(
     Cancion.countDocuments(filter),
   ])
 
-  const isMultimedia = user.rol === 'multimedia'
+  const isMultimedia = user.rol === 'MULTIMEDIA'
   return {
     data:       docs.map((d) => { const dto = toDTO(d); return isMultimedia ? stripChords(dto) : dto }),
     total,
@@ -85,7 +85,7 @@ export async function listCanciones(
 }
 
 export async function getCancion(
-  user: SessionUser,
+  user: TenantSessionUser,
   id: string,
   targetTone?: Tonalidad,
 ): Promise<CancionDTO | CancionSinAcordesDTO> {
@@ -101,16 +101,16 @@ export async function getCancion(
   }
 
   // Multimedia role never receives chord data
-  if (user.rol === 'multimedia') return stripChords(dto)
+  if (user.rol === 'MULTIMEDIA') return stripChords(dto)
 
   return dto
 }
 
 export async function createCancion(
-  user: SessionUser,
+  user: TenantSessionUser,
   data: Omit<CancionDTO, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<CancionDTO> {
-  if (user.rol === 'multimedia') throw new ForbiddenError()
+  if (user.rol === 'MULTIMEDIA') throw new ForbiddenError()
 
   await connectDB()
 
@@ -124,11 +124,11 @@ export async function createCancion(
 }
 
 export async function updateCancion(
-  user: SessionUser,
+  user: TenantSessionUser,
   id: string,
   data: Partial<Omit<CancionDTO, 'id' | 'createdAt' | 'updatedAt'>>,
 ): Promise<CancionDTO> {
-  if (user.rol === 'multimedia') throw new ForbiddenError()
+  if (user.rol === 'MULTIMEDIA') throw new ForbiddenError()
 
   await connectDB()
 
@@ -143,8 +143,8 @@ export async function updateCancion(
   return toDTO(doc)
 }
 
-export async function deleteCancion(user: SessionUser, id: string): Promise<void> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+export async function deleteCancion(user: TenantSessionUser, id: string): Promise<void> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
 

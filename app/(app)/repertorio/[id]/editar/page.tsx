@@ -12,7 +12,7 @@ export default async function EditarCancionPage({
   const { id } = await params
   const user   = await verifySession()
 
-  if (user.rol === 'multimedia') redirect(`/repertorio/${id}`)
+  if (user.rol === 'MULTIMEDIA') redirect(`/repertorio/${id}`)
 
   const cancion = await getCancion(user, id) as CancionDTO
 

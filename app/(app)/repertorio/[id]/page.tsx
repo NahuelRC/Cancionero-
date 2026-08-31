@@ -12,7 +12,7 @@ export default async function CancionDetailPage({
   const user   = await verifySession()
   const cancion = await getCancion(user, id)
 
-  const isAdmin = user.rol === 'admin'
+  const isAdmin = user.rol === 'ADMIN'
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -29,7 +29,7 @@ export default async function CancionDetailPage({
       <div className="flex-1 overflow-hidden">
         <SongViewer
           cancion={cancion as CancionDTO | CancionSinAcordesDTO}
-          sinAcordes={user.rol === 'multimedia'}
+          sinAcordes={user.rol === 'MULTIMEDIA'}
         />
       </div>
     </div>

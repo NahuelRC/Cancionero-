@@ -30,7 +30,7 @@ export function CancionActions({ id, titulo }: { id: string; titulo: string }) {
 
       {confirm ? (
         <div className="flex items-center gap-1.5">
-          <span className="text-[11.5px] text-[#d9694f]">¿Eliminar "{titulo}"?</span>
+          <span className="text-[11.5px] text-[#d9694f]">¿Eliminar &quot;{titulo}&quot;?</span>
           <button
             onClick={handleDelete}
             disabled={deleting}

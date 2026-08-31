@@ -5,6 +5,12 @@ import { compare } from 'bcryptjs'
 import { connectDB } from './db'
 import { Usuario } from '@/models/Usuario'
 import { Iglesia } from '@/models/Iglesia'
+import { isTenantRole, normalizeRole, type SessionUser } from '@/types'
+import type { IUsuario } from '@/models/Usuario'
+
+type UsuarioLean = Omit<IUsuario, keyof Document> & {
+  _id: { toString(): string }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -13,41 +19,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email:      { label: 'Email', type: 'email' },
         password:   { label: 'Contraseña', type: 'password' },
-        iglesiaSlug: { label: 'Iglesia', type: 'text' },
       },
       async authorize(credentials) {
-        const { email, password, iglesiaSlug } = credentials as {
+        const { email, password } = credentials as {
           email: string
           password: string
-          iglesiaSlug: string
         }
 
-        if (!email || !password || !iglesiaSlug) return null
+        if (!email || !password) return null
 
         await connectDB()
 
-        const iglesia = await Iglesia.findOne({ slug: iglesiaSlug }).lean()
-        if (!iglesia) return null
-
-        const usuario = await Usuario.findOne({
-          iglesiaId: iglesia._id,
+        const usuarios = await Usuario.find({
           email: email.toLowerCase(),
           activo: true,
         }).lean()
 
-        if (!usuario || !usuario.passwordHash) return null
+        for (const usuario of usuarios) {
+          if (!usuario.passwordHash) continue
+          const valid = await compare(password, usuario.passwordHash)
+          if (!valid) continue
 
-        const valid = await compare(password, usuario.passwordHash)
-        if (!valid) return null
-
-        return {
-          id:          usuario._id.toString(),
-          nombre:      usuario.nombre,
-          email:       usuario.email,
-          rol:         usuario.rol,
-          iglesiaId:   iglesia._id.toString(),
-          iglesiaSlug: iglesia.slug,
+          const authUser = await resolveTenantUser(usuario as UsuarioLean)
+          if (authUser) return authUser
         }
+
+        return null
       },
     }),
 
@@ -58,31 +55,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
-    async signIn({ user, account }) {
-      // Google sign-in: look up the user by googleId or email
+    async signIn({ user, account, profile }) {
       if (account?.provider === 'google') {
+        const emailVerified = typeof profile?.email_verified === 'boolean'
+          ? profile.email_verified
+          : true
+        if (!emailVerified) return '/login?error=EmailNotVerified'
+
         await connectDB()
-        const existing = await Usuario.findOne({
-          $or: [{ googleId: account.providerAccountId }, { email: user.email }],
+
+        if (!user.email) return '/login?error=NoAccount'
+
+        const byGoogleId = await Usuario.find({
           activo: true,
-        }).lean()
+          googleId: account.providerAccountId,
+        }).limit(2).lean()
 
-        if (!existing) return '/login?error=NoAccount'
+        if (byGoogleId.length > 1) return '/login?error=NoAccount'
 
-        const iglesia = await Iglesia.findById(existing.iglesiaId).lean()
-        if (!iglesia) return '/login?error=NoAccount'
+        let existing = byGoogleId[0] as UsuarioLean | undefined
+        if (!existing) {
+          const byEmail = await Usuario.find({
+            activo: true,
+            email: user.email.toLowerCase(),
+          }).limit(2).lean()
 
-        // Attach custom fields to user so jwt callback can read them
-        user.id          = existing._id.toString()
-        user.nombre      = existing.nombre
-        user.email       = existing.email
-        user.rol         = existing.rol
-        user.iglesiaId   = existing.iglesiaId.toString()
-        user.iglesiaSlug = iglesia.slug
+          if (byEmail.length > 1) return '/login?error=ContactAdmin'
+          existing = byEmail[0] as UsuarioLean | undefined
+        }
 
-        // Persist googleId on first OAuth login
+        if (!existing) return '/login?error=PlanRequired'
+
+        const authUser = await resolveTenantUser(existing)
+        if (!authUser?.iglesiaId) return '/login?error=NoAccount'
+
+        user.id          = authUser.id
+        user.nombre      = authUser.nombre
+        user.email       = authUser.email
+        user.rol         = authUser.rol
+        user.iglesiaId   = authUser.iglesiaId
+        user.iglesiaSlug = authUser.iglesiaSlug
+
         if (!existing.googleId) {
-          await Usuario.updateOne({ _id: existing._id }, { googleId: account.providerAccountId })
+          await Usuario.updateOne(
+            { _id: existing._id, iglesiaId: existing.iglesiaId },
+            { googleId: account.providerAccountId },
+          )
         }
       }
       return true
@@ -92,7 +110,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id          = user.id!
         token.nombre      = user.nombre
-        token.rol         = user.rol
+        token.rol         = normalizeRole(user.rol) ?? user.rol
         token.iglesiaId   = user.iglesiaId
         token.iglesiaSlug = user.iglesiaSlug
       }
@@ -103,7 +121,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id          = token.id
       session.user.nombre      = token.nombre
       session.user.email       = token.email!
-      session.user.rol         = token.rol
+      session.user.rol         = normalizeRole(token.rol) ?? token.rol
       session.user.iglesiaId   = token.iglesiaId
       session.user.iglesiaSlug = token.iglesiaSlug
       return session
@@ -117,3 +135,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   session: { strategy: 'jwt' },
 })
+
+async function resolveTenantUser(usuario: UsuarioLean): Promise<SessionUser | null> {
+  if (
+    !usuario.iglesiaId ||
+    usuario.activo === false ||
+    usuario.status === 'SUSPENDED' ||
+    usuario.status === 'DISABLED'
+  ) {
+    return null
+  }
+
+  const rol = normalizeRole(usuario.rol)
+  if (!isTenantRole(rol)) return null
+
+  const iglesia = await Iglesia.findById(usuario.iglesiaId).lean()
+  if (
+    !iglesia ||
+    (iglesia.status && iglesia.status !== 'ACTIVE') ||
+    (iglesia.subscriptionStatus && iglesia.subscriptionStatus !== 'ACTIVE') ||
+    iglesia.estadoSuscripcion === 'vencida'
+  ) {
+    return null
+  }
+
+  return {
+    id:          usuario._id.toString(),
+    nombre:      usuario.nombre,
+    email:       usuario.email,
+    rol,
+    iglesiaId:   usuario.iglesiaId.toString(),
+    iglesiaSlug: iglesia.slug,
+    status:      usuario.status ?? 'ACTIVE',
+    onboardingStatus: usuario.onboardingStatus ?? 'COMPLETED',
+  }
+}

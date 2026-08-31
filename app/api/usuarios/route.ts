@@ -5,10 +5,11 @@ import { listUsuarios } from '@/services/usuarios'
 import { inviteUsuario } from '@/services/invitaciones'
 import { toApiError } from '@/lib/errors'
 import { rateLimit, getIp } from '@/lib/ratelimit'
+import { TENANT_USER_ROLES, normalizeRole } from '@/types'
 
 export async function GET() {
   try {
-    const user = await requireTenant(['admin'])
+    const user = await requireTenant(['ADMIN'])
     const usuarios = await listUsuarios(user)
     return NextResponse.json({ ok: true, data: usuarios })
   } catch (err) {
@@ -19,7 +20,10 @@ export async function GET() {
 
 const InviteSchema = z.object({
   email: z.string().email(),
-  rol:   z.enum(['admin', 'musico', 'multimedia']),
+  rol:   z.preprocess(
+    (value) => typeof value === 'string' ? normalizeRole(value) : value,
+    z.enum(TENANT_USER_ROLES),
+  ),
 })
 
 export async function POST(req: NextRequest) {
@@ -32,7 +36,7 @@ export async function POST(req: NextRequest) {
         { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
       )
     }
-    const user = await requireTenant(['admin'])
+    const user = await requireTenant(['ADMIN'])
     const body = await req.json()
     const parsed = InviteSchema.safeParse(body)
     if (!parsed.success) {

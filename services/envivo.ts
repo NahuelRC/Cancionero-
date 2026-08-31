@@ -3,7 +3,7 @@ import { connectDB } from '@/lib/db'
 import { EnVivo } from '@/models/EnVivo'
 import { Cancion } from '@/models/Cancion'
 import { ForbiddenError, NotFoundError } from '@/lib/errors'
-import type { EnVivoState, EnVivoSetItem, SessionUser, Tonalidad, PaginatedResponse } from '@/types'
+import type { EnVivoState, EnVivoSetItem, TenantSessionUser, Tonalidad, PaginatedResponse } from '@/types'
 import type { Types } from 'mongoose'
 
 async function populateSetItems(
@@ -55,14 +55,14 @@ async function toState(doc: InstanceType<typeof EnVivo> | null): Promise<EnVivoS
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export async function getEnVivoState(user: SessionUser): Promise<EnVivoState> {
+export async function getEnVivoState(user: TenantSessionUser): Promise<EnVivoState> {
   await connectDB()
   const doc = await EnVivo.findOne({ iglesiaId: user.iglesiaId, activo: true }).lean()
   return toState(doc as InstanceType<typeof EnVivo> | null)
 }
 
 export async function getEnVivoHistorial(
-  user: SessionUser,
+  user: TenantSessionUser,
   opts: { page?: number; pageSize?: number } = {},
 ): Promise<PaginatedResponse<EnVivoState>> {
   await connectDB()
@@ -90,10 +90,10 @@ export async function getEnVivoHistorial(
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export async function createEnVivo(
-  user: SessionUser,
+  user: TenantSessionUser,
   data: { nombre?: string; fecha?: string },
 ): Promise<EnVivoState> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
 
@@ -113,10 +113,10 @@ export async function createEnVivo(
 }
 
 export async function addCancionToSet(
-  user: SessionUser,
+  user: TenantSessionUser,
   cancionId: string,
 ): Promise<EnVivoState> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
 
@@ -134,10 +134,10 @@ export async function addCancionToSet(
 }
 
 export async function removeCancionFromSet(
-  user: SessionUser,
+  user: TenantSessionUser,
   idx: number,
 ): Promise<EnVivoState> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
 
@@ -159,11 +159,11 @@ export async function removeCancionFromSet(
 }
 
 export async function moveCancionInSet(
-  user: SessionUser,
+  user: TenantSessionUser,
   fromIdx: number,
   toIdx: number,
 ): Promise<EnVivoState> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
 
@@ -196,10 +196,10 @@ export async function moveCancionInSet(
 }
 
 export async function setActiveCancion(
-  user: SessionUser,
+  user: TenantSessionUser,
   idx: number,
 ): Promise<EnVivoState> {
-  if (user.rol === 'multimedia') throw new ForbiddenError()
+  if (user.rol === 'MULTIMEDIA') throw new ForbiddenError()
 
   await connectDB()
 
@@ -214,11 +214,11 @@ export async function setActiveCancion(
 }
 
 export async function updateCancionTono(
-  user: SessionUser,
+  user: TenantSessionUser,
   idx: number,
   tono: Tonalidad,
 ): Promise<EnVivoState> {
-  if (user.rol === 'multimedia') throw new ForbiddenError()
+  if (user.rol === 'MULTIMEDIA') throw new ForbiddenError()
 
   await connectDB()
 
@@ -231,8 +231,8 @@ export async function updateCancionTono(
   return toState(doc)
 }
 
-export async function stopEnVivo(user: SessionUser): Promise<EnVivoState> {
-  if (user.rol !== 'admin') throw new ForbiddenError()
+export async function stopEnVivo(user: TenantSessionUser): Promise<EnVivoState> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
 

@@ -9,15 +9,21 @@ export default function LoginClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const errorParam      = searchParams.get('error')
-  const slugParam       = searchParams.get('slug') ?? ''
   const registeredParam = searchParams.get('registered')
 
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [slug, setSlug]         = useState(slugParam)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(
-    errorParam === 'NoAccount' ? 'Tu cuenta de Google no está registrada en esta iglesia.' : null
+    errorParam === 'NoAccount'
+      ? 'No pudimos habilitar el acceso para esta cuenta.'
+      : errorParam === 'PlanRequired'
+        ? 'Para crear una nueva iglesia primero necesitás contratar un plan.'
+        : errorParam === 'ContactAdmin'
+          ? 'Esta cuenta necesita revisión antes de ingresar. Contactá al administrador.'
+          : errorParam === 'EmailNotVerified'
+            ? 'Tu cuenta de Google no tiene el email verificado.'
+        : null
   )
   const registered = registeredParam === '1'
 
@@ -29,11 +35,10 @@ export default function LoginClient() {
       const res = await signIn('credentials', {
         email,
         password,
-        iglesiaSlug: slug,
         redirect: false,
       })
       if (res?.error) {
-        setError('Email, contraseña o nombre de iglesia incorrectos.')
+        setError('Email o contraseña incorrectos.')
       } else {
         router.push('/en-vivo')
       }
@@ -43,18 +48,24 @@ export default function LoginClient() {
   }
 
   async function handleGoogle() {
-    await signIn('google', { callbackUrl: '/en-vivo' })
+    setError(null)
+    setLoading(true)
+    try {
+      await signIn('google', { callbackUrl: '/en-vivo' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-full flex items-center justify-center bg-[#0b0c0e]">
       <div className="w-[340px] bg-[#1c2026] border border-[#3a3f47] rounded-[14px] p-[30px_26px]">
         <div className="font-serif font-bold text-[22px] text-[#e8a33d] mb-1">Klave</div>
-        <p className="text-[12.5px] text-[#8b9099] mb-5">Iniciá sesión en tu iglesia</p>
+        <p className="text-[12.5px] text-[#8b9099] mb-5">Iniciá sesión con tu cuenta</p>
 
         {registered && (
           <div className="mb-4 text-[12.5px] text-[#4f8a7b] bg-[#4f8a7b]/10 border border-[#4f8a7b]/30 rounded-lg px-3 py-2">
-            ¡Iglesia creada! Iniciá sesión para continuar.
+            Cuenta creada. Iniciá sesión para continuar.
           </div>
         )}
         {error && (
@@ -64,17 +75,6 @@ export default function LoginClient() {
         )}
 
         <form onSubmit={handleCredentials} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Nombre de iglesia (slug)</span>
-            <input
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="iglesia-nueva-vida"
-              required
-              className="w-full px-[10px] py-[9px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13.5px] outline-none focus:border-[#e8a33d]"
-            />
-          </label>
           <label className="flex flex-col gap-[5px]">
             <span className="text-[12px] text-[#8b9099]">Email</span>
             <input
@@ -114,7 +114,8 @@ export default function LoginClient() {
         <button
           type="button"
           onClick={handleGoogle}
-          className="w-full flex items-center justify-center gap-2 py-[10px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13.5px] cursor-pointer hover:bg-[#2e333b]"
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 py-[10px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13.5px] cursor-pointer hover:bg-[#2e333b] disabled:opacity-60"
         >
           <GoogleIcon />
           Continuar con Google
@@ -122,7 +123,7 @@ export default function LoginClient() {
 
         <p className="text-center text-[12px] text-[#8b9099] mt-4">
           ¿Administrador sin cuenta de iglesia?{' '}
-          <Link href="/register" className="text-[#4f8a7b]">Crear cuenta</Link>
+          <Link href="/register" className="text-[#4f8a7b]">Ver planes</Link>
         </p>
       </div>
     </div>

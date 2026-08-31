@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    await requireTenant(['admin', 'musico'])
+    await requireTenant(['ADMIN', 'MUSICIAN'])
 
     const formData = await req.formData()
     const file = formData.get('file')

@@ -7,8 +7,8 @@ declare module '@auth/core/types' {
       nombre: string
       email: string
       rol: UserRole
-      iglesiaId: string
-      iglesiaSlug: string
+      iglesiaId?: string | null
+      iglesiaSlug?: string | null
     }
   }
 
@@ -17,8 +17,8 @@ declare module '@auth/core/types' {
     nombre: string
     email?: string | null
     rol: UserRole
-    iglesiaId: string
-    iglesiaSlug: string
+    iglesiaId?: string | null
+    iglesiaSlug?: string | null
   }
 }
 
@@ -27,7 +27,7 @@ declare module '@auth/core/jwt' {
     id: string
     nombre: string
     rol: UserRole
-    iglesiaId: string
-    iglesiaSlug: string
+    iglesiaId?: string | null
+    iglesiaSlug?: string | null
   }
 }

@@ -52,7 +52,7 @@ const CreateSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireTenant(['admin', 'musico'])
+    const user = await requireTenant(['ADMIN', 'MUSICIAN'])
     const body = await req.json()
     const parsed = CreateSchema.safeParse(body)
     if (!parsed.success) {

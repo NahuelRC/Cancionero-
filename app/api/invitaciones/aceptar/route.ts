@@ -16,12 +16,12 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ ok: false, message: 'Datos inválidos', issues: parsed.error.flatten() }, { status: 422 })
     }
-    const { iglesiaSlug } = await acceptInvitacion(
+    await acceptInvitacion(
       parsed.data.token,
       parsed.data.nombre,
       parsed.data.password,
     )
-    return NextResponse.json({ ok: true, data: { iglesiaSlug } })
+    return NextResponse.json({ ok: true, data: null })
   } catch (err) {
     const { message, statusCode } = toApiError(err)
     return NextResponse.json({ ok: false, message }, { status: statusCode })

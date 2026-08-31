@@ -1,5 +1,4 @@
 import mongoose, { Document, Schema, Types } from 'mongoose'
-import type { Tonalidad } from '@/types'
 
 const TONALIDADES = [
   'C','C#','Db','D','D#','Eb','E','F','F#','Gb','G','G#','Ab','A','A#','Bb','B',
