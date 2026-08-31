@@ -1,10 +1,10 @@
 import 'server-only'
-import { randomBytes } from 'crypto'
 import { connectDB } from '@/lib/db'
 import { Invitacion } from '@/models/Invitacion'
 import { Usuario } from '@/models/Usuario'
 import { Iglesia } from '@/models/Iglesia'
 import { ForbiddenError, NotFoundError, ConflictError } from '@/lib/errors'
+import { createSecureToken, hashSecureToken } from '@/lib/secure-tokens'
 import { isTenantRole, normalizeRole, type TenantSessionUser, type TenantUserRole } from '@/types'
 import { Resend } from 'resend'
 
@@ -28,14 +28,16 @@ export async function inviteUsuario(
   // Revoke any pending invite for same email in this iglesia
   await Invitacion.deleteMany({ iglesiaId: user.iglesiaId, email: email.toLowerCase() })
 
-  const token     = randomBytes(32).toString('hex')
+  const token     = createSecureToken()
+  const tokenHash = hashSecureToken(token)
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 48) // 48h
 
   await Invitacion.create({
     iglesiaId: user.iglesiaId,
     email:     email.toLowerCase(),
     rol,
-    token,
+    token:     tokenHash,
+    tokenHash,
     expiresAt,
     status:    'PENDING',
   })
@@ -63,9 +65,18 @@ export async function acceptInvitacion(
 ): Promise<void> {
   await connectDB()
 
-  // Atomic claim: marks usedAt in one operation — concurrent requests get null
+  const tokenHash = hashSecureToken(token)
+
   const invitacion = await Invitacion.findOneAndUpdate(
-    { token, usedAt: null, expiresAt: { $gt: new Date() }, status: { $ne: 'ACCEPTED' } },
+    {
+      $or: [
+        { tokenHash },
+        { token },
+      ],
+      usedAt: null,
+      expiresAt: { $gt: new Date() },
+      status: { $in: ['PENDING', null] },
+    },
     { $set: { usedAt: new Date(), status: 'ACCEPTED' } },
     { new: false },
   )

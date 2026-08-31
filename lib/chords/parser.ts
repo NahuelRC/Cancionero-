@@ -1,5 +1,5 @@
 import mammoth from 'mammoth'
-import type { SongSection, SongLine, Tonalidad } from '@/types'
+import type { SongSection, Tonalidad } from '@/types'
 import { isChordLine, extractChordsFromLine, detectKey } from './detector'
 
 interface ParseResult {

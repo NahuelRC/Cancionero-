@@ -10,7 +10,8 @@ export interface IInvitacion extends Document {
   iglesiaId: Types.ObjectId
   email: string
   rol: StoredUserRole
-  token: string              // secure random token sent in the invite link
+  token?: string             // legacy field; new records store tokenHash here for old indexes
+  tokenHash?: string
   expiresAt: Date
   usedAt?: Date
   status?: InvitationStatus
@@ -22,7 +23,8 @@ const InvitacionSchema = new Schema<IInvitacion>(
     iglesiaId: { type: Schema.Types.ObjectId, ref: 'Iglesia', required: true },
     email:     { type: String, required: true, lowercase: true, trim: true },
     rol:       { type: String, enum: [...TENANT_USER_ROLES, 'admin', 'musico', 'multimedia'], required: true },
-    token:     { type: String, required: true, unique: true },
+    token:     { type: String, select: false },
+    tokenHash: { type: String, required: true, unique: true, sparse: true },
     expiresAt: { type: Date, required: true },
     usedAt:    Date,
     status:    { type: String, enum: INVITATION_STATUS, default: 'PENDING' },

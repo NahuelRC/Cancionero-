@@ -65,7 +65,7 @@ export default function LoginClient() {
 
         {registered && (
           <div className="mb-4 text-[12.5px] text-[#4f8a7b] bg-[#4f8a7b]/10 border border-[#4f8a7b]/30 rounded-lg px-3 py-2">
-            ¡Iglesia creada! Iniciá sesión para continuar.
+            Cuenta creada. Iniciá sesión para continuar.
           </div>
         )}
         {error && (

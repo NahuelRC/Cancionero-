@@ -99,7 +99,7 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
               href={filterUrl({ q: undefined, page: undefined })}
               className="inline-flex items-center gap-1 bg-[#262b33] border border-[#3a3f47] text-[#c9cdd3] px-[9px] py-[4px] rounded-full text-[11.5px] no-underline hover:border-[#8b9099]"
             >
-              "{q}" <span className="text-[13px] leading-none">×</span>
+              &quot;{q}&quot; <span className="text-[13px] leading-none">×</span>
             </Link>
           </div>
         )}

@@ -4,6 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+interface Props {
+  directRegisterEnabled: boolean
+  checkoutUrl: string | null
+}
+
 function slugify(s: string) {
   return s
     .toLowerCase()
@@ -14,7 +19,7 @@ function slugify(s: string) {
     .replace(/\s+/g, '-')
 }
 
-export default function RegisterClient() {
+export default function RegisterClient({ directRegisterEnabled, checkoutUrl }: Props) {
   const router = useRouter()
 
   const [iglesiaName, setIglesiaName] = useState('')
@@ -59,7 +64,7 @@ export default function RegisterClient() {
     <div className="min-h-full flex items-center justify-center bg-[#0b0c0e] py-10">
       <div className="w-[380px] bg-[#1c2026] border border-[#3a3f47] rounded-[14px] p-[30px_26px]">
         <div className="font-serif font-bold text-[22px] text-[#e8a33d] mb-1">Klave</div>
-        <p className="text-[12.5px] text-[#8b9099] mb-5">Registrá tu iglesia — es gratis</p>
+        <p className="text-[12.5px] text-[#8b9099] mb-5">Contratá un plan para crear tu iglesia</p>
 
         {error && (
           <div className="mb-4 text-[12.5px] text-[#d9694f] bg-[#d9694f]/10 border border-[#d9694f]/30 rounded-lg px-3 py-2">
@@ -67,6 +72,29 @@ export default function RegisterClient() {
           </div>
         )}
 
+        {!directRegisterEnabled ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-[13px] text-[#c9cdd3] leading-5">
+              Para crear una nueva iglesia primero necesitás contratar un plan.
+            </p>
+            {checkoutUrl ? (
+              <Link
+                href={checkoutUrl}
+                className="mt-1 w-full text-center py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px]"
+              >
+                Ver planes
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="mt-1 w-full py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px] opacity-60"
+              >
+                Planes no disponibles
+              </button>
+            )}
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
 
           {/* ── Iglesia ────────────────────────────────────── */}
@@ -150,6 +178,7 @@ export default function RegisterClient() {
             {loading ? 'Creando cuenta…' : 'Crear iglesia y cuenta admin'}
           </button>
         </form>
+        )}
 
         <p className="text-center text-[12px] text-[#8b9099] mt-4">
           ¿Ya tenés cuenta?{' '}
