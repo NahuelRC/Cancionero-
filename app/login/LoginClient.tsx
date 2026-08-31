@@ -40,7 +40,7 @@ export default function LoginClient() {
       if (res?.error) {
         setError('Email o contraseña incorrectos.')
       } else {
-        router.push('/en-vivo')
+        router.push('/')
       }
     } finally {
       setLoading(false)
@@ -51,7 +51,7 @@ export default function LoginClient() {
     setError(null)
     setLoading(true)
     try {
-      await signIn('google', { callbackUrl: '/en-vivo' })
+      await signIn('google', { callbackUrl: '/' })
     } finally {
       setLoading(false)
     }

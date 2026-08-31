@@ -5,6 +5,7 @@ import { compare } from 'bcryptjs'
 import { connectDB } from './db'
 import { Usuario } from '@/models/Usuario'
 import { Iglesia } from '@/models/Iglesia'
+import { isSuperAdminEmail, normalizeEmail } from '@/lib/super-admin'
 import { isTenantRole, normalizeRole, type SessionUser } from '@/types'
 import type { IUsuario } from '@/models/Usuario'
 
@@ -30,8 +31,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         await connectDB()
 
+        const normalizedEmail = normalizeEmail(email)
         const usuarios = await Usuario.find({
-          email: email.toLowerCase(),
+          email: normalizedEmail,
           activo: true,
         }).lean()
 
@@ -39,6 +41,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!usuario.passwordHash) continue
           const valid = await compare(password, usuario.passwordHash)
           if (!valid) continue
+
+          const superAdminUser = resolveSuperAdminUser(usuario as UsuarioLean)
+          if (superAdminUser) return superAdminUser
 
           const authUser = await resolveTenantUser(usuario as UsuarioLean)
           if (authUser) return authUser
@@ -65,6 +70,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await connectDB()
 
         if (!user.email) return '/login?error=NoAccount'
+        const normalizedEmail = normalizeEmail(user.email)
+
+        if (isSuperAdminEmail(normalizedEmail)) {
+          const superAdmin = await getOrCreateSuperAdminFromGoogle({
+            email: normalizedEmail,
+            nombre: user.name ?? normalizedEmail,
+            googleId: account.providerAccountId,
+          })
+
+          user.id          = superAdmin.id
+          user.nombre      = superAdmin.nombre
+          user.email       = superAdmin.email
+          user.rol         = superAdmin.rol
+          user.iglesiaId   = null
+          user.iglesiaSlug = null
+
+          return true
+        }
 
         const byGoogleId = await Usuario.find({
           activo: true,
@@ -77,7 +100,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!existing) {
           const byEmail = await Usuario.find({
             activo: true,
-            email: user.email.toLowerCase(),
+            email: normalizedEmail,
           }).limit(2).lean()
 
           if (byEmail.length > 1) return '/login?error=ContactAdmin'
@@ -169,4 +192,54 @@ async function resolveTenantUser(usuario: UsuarioLean): Promise<SessionUser | nu
     status:      usuario.status ?? 'ACTIVE',
     onboardingStatus: usuario.onboardingStatus ?? 'COMPLETED',
   }
+}
+
+function resolveSuperAdminUser(usuario: UsuarioLean): SessionUser | null {
+  const rol = normalizeRole(usuario.rol)
+  if (
+    rol !== 'SUPER_ADMIN' ||
+    !isSuperAdminEmail(usuario.email) ||
+    usuario.activo === false ||
+    usuario.status !== 'ACTIVE'
+  ) {
+    return null
+  }
+
+  return {
+    id: usuario._id.toString(),
+    nombre: usuario.nombre,
+    email: usuario.email,
+    rol: 'SUPER_ADMIN',
+    iglesiaId: null,
+    iglesiaSlug: null,
+    status: usuario.status ?? 'ACTIVE',
+    onboardingStatus: usuario.onboardingStatus ?? 'COMPLETED',
+  }
+}
+
+async function getOrCreateSuperAdminFromGoogle(opts: {
+  email: string
+  nombre: string
+  googleId: string
+}): Promise<SessionUser> {
+  const user = await Usuario.findOneAndUpdate(
+    { iglesiaId: null, email: opts.email },
+    {
+      $set: {
+        googleId: opts.googleId,
+        rol: 'SUPER_ADMIN',
+        activo: true,
+        status: 'ACTIVE',
+        onboardingStatus: 'COMPLETED',
+      },
+      $setOnInsert: {
+        nombre: opts.nombre,
+      },
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true },
+  ).lean()
+
+  const superAdmin = resolveSuperAdminUser(user as UsuarioLean)
+  if (!superAdmin) throw new Error('Invalid super admin')
+  return superAdmin
 }
