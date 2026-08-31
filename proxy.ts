@@ -9,7 +9,7 @@ const PUBLIC_PATHS = [
   '/api/register',
   '/api/invitaciones/aceptar',
   '/api/onboarding',
-  '/api/payments/webhook',
+  '/api/payments/mercadopago',
 ]
 
 export default auth((req) => {

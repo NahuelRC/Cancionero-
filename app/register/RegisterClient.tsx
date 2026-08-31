@@ -7,29 +7,35 @@ import Link from 'next/link'
 interface Props {
   directRegisterEnabled: boolean
   checkoutUrl: string | null
+  mercadoPagoEnabled: boolean
 }
 
 function slugify(s: string) {
   return s
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
 }
 
-export default function RegisterClient({ directRegisterEnabled, checkoutUrl }: Props) {
+export default function RegisterClient({
+  directRegisterEnabled,
+  checkoutUrl,
+  mercadoPagoEnabled,
+}: Props) {
   const router = useRouter()
 
   const [iglesiaName, setIglesiaName] = useState('')
-  const [slug, setSlug]               = useState('')
-  const [slugManual, setSlugManual]   = useState(false)
-  const [nombre, setNombre]           = useState('')
-  const [email, setEmail]             = useState('')
-  const [password, setPassword]       = useState('')
-  const [loading, setLoading]         = useState(false)
-  const [error, setError]             = useState<string | null>(null)
+  const [slug, setSlug] = useState('')
+  const [slugManual, setSlugManual] = useState(false)
+  const [nombre, setNombre] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   function handleIglesiaNameChange(val: string) {
     setIglesiaName(val)
@@ -42,10 +48,10 @@ export default function RegisterClient({ directRegisterEnabled, checkoutUrl }: P
     setLoading(true)
 
     try {
-      const res  = await fetch('/api/register', {
-        method:  'POST',
+      const res = await fetch('/api/register', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ iglesiaName, slug, nombre, email, password }),
+        body: JSON.stringify({ iglesiaName, slug, nombre, email, password }),
       })
       const json = await res.json()
 
@@ -57,6 +63,30 @@ export default function RegisterClient({ directRegisterEnabled, checkoutUrl }: P
       router.push('/login?registered=1')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleCheckout(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setCheckoutLoading(true)
+
+    try {
+      const res = await fetch('/api/payments/mercadopago/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const json = await res.json()
+
+      if (!json.ok) {
+        setError(json.message ?? 'No pudimos iniciar el pago')
+        return
+      }
+
+      window.location.href = json.data.initPoint
+    } finally {
+      setCheckoutLoading(false)
     }
   }
 
@@ -73,11 +103,32 @@ export default function RegisterClient({ directRegisterEnabled, checkoutUrl }: P
         )}
 
         {!directRegisterEnabled ? (
-          <div className="flex flex-col gap-3">
+          <form onSubmit={handleCheckout} className="flex flex-col gap-3">
             <p className="text-[13px] text-[#c9cdd3] leading-5">
               Para crear una nueva iglesia primero necesitás contratar un plan.
             </p>
-            {checkoutUrl ? (
+            {mercadoPagoEnabled ? (
+              <>
+                <label className="flex flex-col gap-[5px]">
+                  <span className="text-[12px] text-[#8b9099]">Email para el pago</span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="maria@iglesia.org"
+                    required
+                    className={inputCls}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={checkoutLoading}
+                  className="mt-1 w-full py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px] cursor-pointer disabled:opacity-60"
+                >
+                  {checkoutLoading ? 'Abriendo Mercado Pago...' : 'Continuar con Mercado Pago'}
+                </button>
+              </>
+            ) : checkoutUrl ? (
               <Link
                 href={checkoutUrl}
                 className="mt-1 w-full text-center py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px]"
@@ -93,91 +144,95 @@ export default function RegisterClient({ directRegisterEnabled, checkoutUrl }: P
                 Planes no disponibles
               </button>
             )}
-          </div>
+          </form>
         ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <div className="text-[11px] font-medium text-[#8b9099] uppercase tracking-wider mt-1 mb-0.5">
+              Tu iglesia
+            </div>
 
-          {/* ── Iglesia ────────────────────────────────────── */}
-          <div className="text-[11px] font-medium text-[#8b9099] uppercase tracking-wider mt-1 mb-0.5">
-            Tu iglesia
-          </div>
+            <label className="flex flex-col gap-[5px]">
+              <span className="text-[12px] text-[#8b9099]">Nombre de la iglesia</span>
+              <input
+                value={iglesiaName}
+                onChange={(e) => handleIglesiaNameChange(e.target.value)}
+                placeholder="Iglesia Nueva Vida"
+                required
+                className={inputCls}
+              />
+            </label>
 
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Nombre de la iglesia</span>
-            <input
-              value={iglesiaName}
-              onChange={(e) => handleIglesiaNameChange(e.target.value)}
-              placeholder="Iglesia Nueva Vida"
-              required
-              className={inputCls}
-            />
-          </label>
+            <label className="flex flex-col gap-[5px]">
+              <span className="text-[12px] text-[#8b9099]">
+                Slug (URL de acceso){' '}
+                <span className="text-[#3a3f47] font-mono">
+                  klave.app/<span className="text-[#e8a33d]">{slug || '...'}</span>
+                </span>
+              </span>
+              <input
+                value={slug}
+                onChange={(e) => {
+                  setSlug(e.target.value.toLowerCase())
+                  setSlugManual(true)
+                }}
+                placeholder="iglesia-nueva-vida"
+                required
+                pattern="[a-z0-9-]+"
+                title="Solo letras minúsculas, números y guiones"
+                className={`${inputCls} font-mono`}
+              />
+              <span className="text-[11px] text-[#8b9099]">
+                Solo letras minúsculas, números y guiones
+              </span>
+            </label>
 
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">
-              Slug (URL de acceso){' '}
-              <span className="text-[#3a3f47] font-mono">klave.app/<span className="text-[#e8a33d]">{slug || '…'}</span></span>
-            </span>
-            <input
-              value={slug}
-              onChange={(e) => { setSlug(e.target.value.toLowerCase()); setSlugManual(true) }}
-              placeholder="iglesia-nueva-vida"
-              required
-              pattern="[a-z0-9-]+"
-              title="Solo letras minúsculas, números y guiones"
-              className={inputCls + ' font-mono'}
-            />
-            <span className="text-[11px] text-[#8b9099]">Solo letras minúsculas, números y guiones</span>
-          </label>
+            <div className="text-[11px] font-medium text-[#8b9099] uppercase tracking-wider mt-2 mb-0.5">
+              Tu cuenta de administrador
+            </div>
 
-          {/* ── Administrador ──────────────────────────────── */}
-          <div className="text-[11px] font-medium text-[#8b9099] uppercase tracking-wider mt-2 mb-0.5">
-            Tu cuenta de administrador
-          </div>
+            <label className="flex flex-col gap-[5px]">
+              <span className="text-[12px] text-[#8b9099]">Tu nombre</span>
+              <input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="María García"
+                required
+                className={inputCls}
+              />
+            </label>
 
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Tu nombre</span>
-            <input
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="María García"
-              required
-              className={inputCls}
-            />
-          </label>
+            <label className="flex flex-col gap-[5px]">
+              <span className="text-[12px] text-[#8b9099]">Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="maria@iglesia.org"
+                required
+                className={inputCls}
+              />
+            </label>
 
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="maria@iglesia.org"
-              required
-              className={inputCls}
-            />
-          </label>
+            <label className="flex flex-col gap-[5px]">
+              <span className="text-[12px] text-[#8b9099]">Contraseña (mín. 8 caracteres)</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                className={inputCls}
+              />
+            </label>
 
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Contraseña (mín. 8 caracteres)</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className={inputCls}
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={loading || !slug}
-            className="mt-2 w-full py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px] cursor-pointer disabled:opacity-60"
-          >
-            {loading ? 'Creando cuenta…' : 'Crear iglesia y cuenta admin'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading || !slug}
+              className="mt-2 w-full py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px] cursor-pointer disabled:opacity-60"
+            >
+              {loading ? 'Creando cuenta…' : 'Crear iglesia y cuenta admin'}
+            </button>
+          </form>
         )}
 
         <p className="text-center text-[12px] text-[#8b9099] mt-4">
