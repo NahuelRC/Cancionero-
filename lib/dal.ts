@@ -5,6 +5,7 @@ import { auth } from './auth'
 import { connectDB } from './db'
 import { Iglesia } from '@/models/Iglesia'
 import { Usuario } from '@/models/Usuario'
+import { isSuperAdminEmail } from '@/lib/super-admin'
 import {
   isTenantRole,
   normalizeRole,
@@ -53,7 +54,13 @@ export async function requireSuperAdmin(): Promise<SessionUser> {
   ).lean()
 
   const dbRole = normalizeRole(user?.rol)
-  if (!user || dbRole !== 'SUPER_ADMIN' || user.activo === false || user.status !== 'ACTIVE') {
+  if (
+    !user ||
+    dbRole !== 'SUPER_ADMIN' ||
+    !isSuperAdminEmail(user.email) ||
+    user.activo === false ||
+    user.status !== 'ACTIVE'
+  ) {
     throw new ForbiddenError('USER_DISABLED')
   }
 
