@@ -5,8 +5,10 @@ const PUBLIC_PATHS = [
   '/login',
   '/register',
   '/onboarding',
+  '/invitaciones/aceptar',
   '/api/auth',
   '/api/register',
+  '/api/health',
   '/api/invitaciones/aceptar',
   '/api/onboarding',
   '/api/payments/webhook',
@@ -28,6 +30,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!login|register|onboarding|api/auth|api/register|api/health|api/invitaciones/aceptar|api/onboarding|api/payments/webhook|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

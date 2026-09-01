@@ -5,7 +5,11 @@ import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function LoginClient() {
+interface Props {
+  googleEnabled: boolean
+}
+
+export default function LoginClient({ googleEnabled }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const errorParam      = searchParams.get('error')
@@ -48,6 +52,8 @@ export default function LoginClient() {
   }
 
   async function handleGoogle() {
+    if (!googleEnabled) return
+
     setError(null)
     setLoading(true)
     try {
@@ -105,21 +111,25 @@ export default function LoginClient() {
           </button>
         </form>
 
-        <div className="flex items-center gap-[10px] my-4 text-[#8b9099] text-[11px]">
-          <span className="flex-1 h-px bg-[#3a3f47]" />
-          o
-          <span className="flex-1 h-px bg-[#3a3f47]" />
-        </div>
+        {googleEnabled && (
+          <>
+            <div className="flex items-center gap-[10px] my-4 text-[#8b9099] text-[11px]">
+              <span className="flex-1 h-px bg-[#3a3f47]" />
+              o
+              <span className="flex-1 h-px bg-[#3a3f47]" />
+            </div>
 
-        <button
-          type="button"
-          onClick={handleGoogle}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 py-[10px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13.5px] cursor-pointer hover:bg-[#2e333b] disabled:opacity-60"
-        >
-          <GoogleIcon />
-          Continuar con Google
-        </button>
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-[10px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13.5px] cursor-pointer hover:bg-[#2e333b] disabled:opacity-60"
+            >
+              <GoogleIcon />
+              Continuar con Google
+            </button>
+          </>
+        )}
 
         <p className="text-center text-[12px] text-[#8b9099] mt-4">
           ¿Administrador sin cuenta de iglesia?{' '}

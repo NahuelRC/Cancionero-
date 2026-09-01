@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { signOut } from 'next-auth/react'
 import type { SuperAdminIglesiaDTO } from '@/services/super-admin'
+import { useLogout } from '@/components/useLogout'
 
 interface Props {
   initialIglesias: SuperAdminIglesiaDTO[]
@@ -21,6 +21,7 @@ export default function SuperAdminClient({ initialIglesias, userName, userEmail 
   const [sending, setSending] = useState(false)
   const [revokingId, setRevokingId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<Feedback>(null)
+  const { isLoggingOut, logout } = useLogout()
 
   const filteredIglesias = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -123,8 +124,9 @@ export default function SuperAdminClient({ initialIglesias, userName, userEmail 
           </div>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: '/login' })}
-            className="px-3 py-2 rounded-lg border border-[#3a3f47] bg-[#1c2026] text-[#c9cdd3] text-[12.5px] hover:bg-[#262b33] cursor-pointer"
+            onClick={logout}
+            disabled={isLoggingOut}
+            className="px-3 py-2 rounded-lg border border-[#3a3f47] bg-[#1c2026] text-[#c9cdd3] text-[12.5px] hover:bg-[#262b33] cursor-pointer disabled:cursor-default disabled:opacity-60"
           >
             Cerrar sesión
           </button>

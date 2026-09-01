@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
 import type { SessionUser } from '@/types'
+import { useLogout } from './useLogout'
 
 const NAV_ITEMS = [
   { href: '/en-vivo',   label: 'En vivo',       icon: '▣' },
@@ -19,6 +19,7 @@ interface Props {
 
 export function Sidebar({ user, iglesiaName }: Props) {
   const pathname = usePathname()
+  const { isLoggingOut, logout } = useLogout()
 
   const initials = user.nombre
     .split(' ')
@@ -77,9 +78,12 @@ export function Sidebar({ user, iglesiaName }: Props) {
           <div className="text-[10.5px] text-[#8b9099]">{rolLabel[user.rol]}</div>
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          type="button"
+          onClick={logout}
+          disabled={isLoggingOut}
+          aria-label="Cerrar sesión"
           title="Cerrar sesión"
-          className="text-[#8b9099] hover:text-[#f4f1e8] text-[12px] cursor-pointer"
+          className="text-[#8b9099] hover:text-[#f4f1e8] text-[12px] cursor-pointer disabled:cursor-default disabled:opacity-50"
         >
           ⏻
         </button>
