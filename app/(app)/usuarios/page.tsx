@@ -11,6 +11,12 @@ interface UsuarioDTO {
   activo: boolean
 }
 
+interface InviteResponseData {
+  message?: string
+  inviteUrl?: string
+  emailSent?: boolean
+}
+
 const ROL_LABEL: Record<TenantUserRole, string> = {
   ADMIN:      'Administrador',
   MUSICIAN:   'Músico',
@@ -24,7 +30,7 @@ export default function UsuariosPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRol, setInviteRol]   = useState<TenantUserRole>('MUSICIAN')
   const [sending, setSending]       = useState(false)
-  const [feedback, setFeedback]     = useState<{ type: 'ok' | 'err'; msg: string } | null>(null)
+  const [feedback, setFeedback]     = useState<{ type: 'ok' | 'err'; msg: string; inviteUrl?: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -53,7 +59,14 @@ export default function UsuariosPage() {
       })
       const json = await res.json()
       if (json.ok) {
-        setFeedback({ type: 'ok', msg: `Invitación enviada a ${inviteEmail}` })
+        const data = json.data as InviteResponseData
+        setFeedback({
+          type: 'ok',
+          msg: data.emailSent
+            ? `Invitación enviada a ${inviteEmail}`
+            : `Invitación creada para ${inviteEmail}. Copia el link para compartirlo.`,
+          inviteUrl: data.inviteUrl,
+        })
         setInviteEmail('')
       } else {
         setFeedback({ type: 'err', msg: json.message })
@@ -120,6 +133,22 @@ export default function UsuariosPage() {
         {feedback && (
           <div className={`mb-4 text-[12.5px] rounded-lg px-3 py-2 ${feedback.type === 'ok' ? 'text-[#4f8a7b] bg-[#4f8a7b]/10 border border-[#4f8a7b]/30' : 'text-[#d9694f] bg-[#d9694f]/10 border border-[#d9694f]/30'}`}>
             {feedback.msg}
+            {feedback.inviteUrl && (
+              <div className="mt-2 flex flex-col sm:flex-row gap-2">
+                <input
+                  readOnly
+                  value={feedback.inviteUrl}
+                  className="flex-1 min-w-0 px-2 py-1.5 rounded-md border border-[#3a3f47] bg-[#101317] text-[#c9cdd3] text-[11.5px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(feedback.inviteUrl!)}
+                  className="px-3 py-1.5 rounded-md border border-[#4f8a7b]/40 text-[#4f8a7b] text-[11.5px] cursor-pointer"
+                >
+                  Copiar
+                </button>
+              </div>
+            )}
           </div>
         )}
 

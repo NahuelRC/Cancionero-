@@ -7,16 +7,22 @@ import { ForbiddenError, NotFoundError, ConflictError } from '@/lib/errors'
 import { createSecureToken, hashSecureToken } from '@/lib/secure-tokens'
 import { isTenantRole, normalizeRole, type TenantSessionUser, type TenantUserRole } from '@/types'
 import { Resend } from 'resend'
+import { isInternalDemoMode } from '@/lib/demo-mode'
 
 function getResend() { return new Resend(process.env.RESEND_API_KEY) }
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 const FROM    = process.env.RESEND_FROM ?? 'Klave <no-reply@klave.app>'
 
+export interface InviteUsuarioResult {
+  inviteUrl: string
+  emailSent: boolean
+}
+
 export async function inviteUsuario(
   user: TenantSessionUser,
   email: string,
   rol: TenantUserRole,
-): Promise<void> {
+): Promise<InviteUsuarioResult> {
   if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
@@ -45,6 +51,10 @@ export async function inviteUsuario(
   const iglesia = await Iglesia.findById(user.iglesiaId).lean()
   const inviteUrl = `${APP_URL}/invitaciones/aceptar?token=${token}`
 
+  if (isInternalDemoMode() || !process.env.RESEND_API_KEY) {
+    return { inviteUrl, emailSent: false }
+  }
+
   await getResend().emails.send({
     from:    FROM,
     to:      email,
@@ -56,6 +66,8 @@ export async function inviteUsuario(
       <p>El link expira en 48 horas.</p>
     `,
   })
+
+  return { inviteUrl, emailSent: true }
 }
 
 export async function acceptInvitacion(

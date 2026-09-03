@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 interface Props {
+  demoMode: boolean
   directRegisterEnabled: boolean
   checkoutUrl: string | null
   mercadoPagoEnabled: boolean
@@ -21,6 +22,7 @@ function slugify(s: string) {
 }
 
 export default function RegisterClient({
+  demoMode,
   directRegisterEnabled,
   checkoutUrl,
   mercadoPagoEnabled,
@@ -94,7 +96,13 @@ export default function RegisterClient({
     <div className="min-h-full flex items-center justify-center bg-[#0b0c0e] py-10">
       <div className="w-[380px] bg-[#1c2026] border border-[#3a3f47] rounded-[14px] p-[30px_26px]">
         <div className="font-serif font-bold text-[22px] text-[#e8a33d] mb-1">Klave</div>
-        <p className="text-[12.5px] text-[#8b9099] mb-5">Contratá un plan para crear tu iglesia</p>
+        <p className="text-[12.5px] text-[#8b9099] mb-5">
+          {directRegisterEnabled
+            ? demoMode
+              ? 'Demo interna: crea tu iglesia sin pago'
+              : 'Crea tu iglesia'
+            : 'Contratá un plan para crear tu iglesia'}
+        </p>
 
         {error && (
           <div className="mb-4 text-[12.5px] text-[#d9694f] bg-[#d9694f]/10 border border-[#d9694f]/30 rounded-lg px-3 py-2">
@@ -147,6 +155,12 @@ export default function RegisterClient({
           </form>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            {demoMode && (
+              <div className="text-[12.5px] text-[#4f8a7b] bg-[#4f8a7b]/10 border border-[#4f8a7b]/30 rounded-lg px-3 py-2">
+                Modo demo activo. La iglesia queda habilitada con plan Pro sin checkout.
+              </div>
+            )}
+
             <div className="text-[11px] font-medium text-[#8b9099] uppercase tracking-wider mt-1 mb-0.5">
               Tu iglesia
             </div>

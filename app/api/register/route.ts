@@ -5,6 +5,8 @@ import { Iglesia } from '@/models/Iglesia'
 import { Usuario } from '@/models/Usuario'
 import { hash } from 'bcryptjs'
 import { toApiError, ConflictError } from '@/lib/errors'
+import { isDirectRegisterEnabled, isInternalDemoMode } from '@/lib/demo-mode'
+import { createDemoSongsForChurch } from '@/services/demo-data'
 
 const Schema = z.object({
   iglesiaName: z.string().min(2).max(100).trim(),
@@ -19,7 +21,7 @@ const Schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    if (process.env.ALLOW_DIRECT_REGISTER !== 'true') {
+    if (!isDirectRegisterEnabled()) {
       return NextResponse.json(
         {
           ok: false,
@@ -45,10 +47,19 @@ export async function POST(req: NextRequest) {
     const existing = await Iglesia.findOne({ slug })
     if (existing) throw new ConflictError('Ese nombre de iglesia ya está en uso')
 
-    const iglesia = await Iglesia.create({ nombre: iglesiaName, slug, plan: 'free' })
+    const demoMode = isInternalDemoMode()
+
+    const iglesia = await Iglesia.create({
+      nombre: iglesiaName,
+      slug,
+      plan: demoMode ? 'pro' : 'free',
+      estadoSuscripcion: 'activa',
+      subscriptionStatus: 'ACTIVE',
+      status: 'ACTIVE',
+    })
 
     const passwordHash = await hash(password, 12)
-    await Usuario.create({
+    const admin = await Usuario.create({
       iglesiaId:    iglesia._id,
       nombre,
       email:        email.toLowerCase(),
@@ -58,6 +69,17 @@ export async function POST(req: NextRequest) {
       status:       'ACTIVE',
       onboardingStatus: 'COMPLETED',
     })
+
+    if (demoMode) {
+      try {
+        await createDemoSongsForChurch({
+          iglesiaId: iglesia._id,
+          userId: admin._id,
+        })
+      } catch (err) {
+        console.error('[register:demo-data]', err)
+      }
+    }
 
     return NextResponse.json({ ok: true, data: { slug } }, { status: 201 })
   } catch (err) {

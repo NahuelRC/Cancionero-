@@ -42,8 +42,14 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ ok: false, message: 'Datos inválidos', issues: parsed.error.flatten() }, { status: 422 })
     }
-    await inviteUsuario(user, parsed.data.email, parsed.data.rol)
-    return NextResponse.json({ ok: true, data: { message: 'Invitación enviada' } }, { status: 201 })
+    const invitation = await inviteUsuario(user, parsed.data.email, parsed.data.rol)
+    return NextResponse.json({
+      ok: true,
+      data: {
+        message: invitation.emailSent ? 'Invitación enviada' : 'Invitación creada',
+        ...invitation,
+      },
+    }, { status: 201 })
   } catch (err) {
     const { message, statusCode } = toApiError(err)
     return NextResponse.json({ ok: false, message }, { status: statusCode })

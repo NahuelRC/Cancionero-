@@ -1,0 +1,158 @@
+KLAVE - FASES DE DESARROLLO PARA DEMO INTERNA
+=============================================
+
+Objetivo:
+Dejar la aplicacion operativa para una demo interna sin pagos reales. Esta lista
+incluye solo desarrollo de producto/configuracion. QA/testing queda fuera por
+decision del proyecto y se retomara en otra fase.
+
+
+FASE 1 - MODO DEMO Y REGISTRO DIRECTO
+-------------------------------------
+Prioridad: critica
+
+[x] Habilitar modo demo interno sin pagos reales
+    - KLAVE_DEMO_MODE=true habilita registro directo.
+    - En desarrollo local el modo demo queda activo por defecto salvo
+      KLAVE_DEMO_MODE=false.
+    - ALLOW_DIRECT_REGISTER=true sigue funcionando como switch manual.
+
+[x] Crear iglesias demo desde /register
+    - La UI muestra que el modo demo esta activo.
+    - El API permite crear iglesia y usuario ADMIN sin checkout.
+    - Las iglesias demo quedan activas y con plan pro.
+
+[x] Agregar canciones demo para iglesias nuevas
+    - En modo demo, cada iglesia nueva arranca con repertorio inicial.
+    - Las canciones demo permiten probar repertorio y En Vivo sin carga manual.
+
+[ ] Pulir primer uso despues del registro
+    - Redirigir a /login?registered=1 o iniciar sesion automaticamente.
+    - Agregar un estado vacio util cuando una iglesia nueva no tiene canciones.
+
+
+FASE 2 - GESTION DE USUARIOS E INVITACIONES
+-------------------------------------------
+Prioridad: alta
+
+[x] Permitir invitaciones sin proveedor de email en modo demo
+    - Si KLAVE_DEMO_MODE esta activo o falta RESEND_API_KEY, no falla el alta.
+    - El admin ve el link de invitacion para copiarlo y compartirlo manualmente.
+
+[ ] Completar vista de invitaciones pendientes
+    - Listar invitaciones PENDING por iglesia.
+    - Mostrar email, rol, fecha de expiracion y estado.
+
+[ ] Agregar acciones sobre invitaciones
+    - Reenviar invitacion.
+    - Revocar invitacion.
+    - Regenerar token si expiro.
+
+[ ] Completar ciclo de usuarios
+    - Reactivar usuarios desactivados.
+    - Cambiar nombre/email si corresponde.
+    - Resetear password o enviar link de recuperacion.
+
+[ ] Proteger reglas criticas de administracion
+    - No permitir que una iglesia quede sin ADMIN activo.
+    - Confirmar cambios sensibles con mensajes claros.
+
+
+FASE 3 - EDICION COMPLETA DE CANCIONES
+--------------------------------------
+Prioridad: alta
+
+[x] Permitir editar letra y acordes sin borrar la cancion
+    - Reutilizar o extraer el editor de preview de /subir.
+    - Editar secciones, lineas, acordes y posiciones.
+
+[x] Agregar administracion estructural de secciones y lineas
+    - Agregar/quitar secciones y lineas.
+
+[x] Endurecer validacion del PATCH de canciones
+    - Reemplazar secciones: z.array(z.any()) por schema estricto.
+    - Validar tono contra lista de tonalidades.
+    - Validar bpm, compas, tags y posiciones de acordes.
+
+[ ] Mejorar mantenimiento del repertorio
+    - Duplicar cancion.
+    - Archivar/restaurar cancion en lugar de solo eliminar.
+    - Opcional: historial de cambios por cancion.
+
+
+FASE 4 - EN VIVO PARA DEMO INTERNA
+----------------------------------
+Prioridad: media/alta
+
+[ ] Revisar permisos de En Vivo
+    - Confirmar si MUSICIAN puede cambiar cancion activa y tono.
+    - Si no corresponde, limitar esas acciones a ADMIN.
+
+[ ] Mejorar experiencia de set
+    - Renombrar sesion activa.
+    - Duplicar set desde una sesion anterior.
+    - Crear set desde canciones seleccionadas en repertorio.
+
+[ ] Mantener SSE/polling actual para demo
+    - No migrar a Change Streams todavia.
+    - Parametrizar intervalos solo si molesta durante la demo.
+
+
+FASE 5 - BACKOFFICE MINIMO
+--------------------------
+Prioridad: media
+
+[ ] Crear vista minima /super-admin solo si hace falta operar varias iglesias
+    - Acceso exclusivo a usuarios SUPER_ADMIN.
+    - Listar iglesias, admins y estado.
+    - Suspender/reactivar iglesia manualmente.
+
+
+FASE 6 - LIMPIEZA DE CONFIGURACION Y DOCUMENTACION
+--------------------------------------------------
+Prioridad: media
+
+[x] Normalizar variables de entorno y documentacion para demo
+    - Documentar KLAVE_DEMO_MODE y ALLOW_DIRECT_REGISTER.
+    - Usar AUTH_SECRET como variable documentada para NextAuth v5.
+    - Documentar AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET.
+    - Actualizar README: el proyecto usa Next 16.
+
+[ ] Limpiar archivos accidentales
+    - Revisar C:UsersnahueAppDataLocalTempklave-dev.log en la raiz.
+    - Confirmar si debe borrarse o agregarse a .gitignore.
+
+[x] Actualizar README principal
+    - Reemplazar contenido default de create-next-app.
+    - Dejar instrucciones reales de instalacion, desarrollo y demo interna.
+
+
+DIFERIDO HASTA VENTA REAL
+-------------------------
+
+[ ] Alta paga completa por /onboarding?token=...
+[ ] Suscripciones reales con Mercado Pago.
+[ ] Webhooks completos de estados de pago.
+[ ] Pantalla de plan/facturacion.
+[ ] Rate limiting distribuido con Redis/Upstash.
+[ ] MongoDB Change Streams para En Vivo.
+[ ] Backups y operacion formal de produccion.
+
+
+ORDEN SUGERIDO
+--------------
+1. Fase 1 - Modo demo y registro directo.
+2. Fase 2 - Usuarios e invitaciones.
+3. Fase 3 - Edicion completa de canciones.
+4. Fase 4 - En Vivo para demo interna.
+5. Fase 6 - Limpieza de configuracion y documentacion.
+6. Fase 5 - Backoffice minimo, solo si se operan varias iglesias.
+
+
+NOTAS
+-----
+- Para demo interna, el camino operativo es:
+  /register -> /login -> cargar canciones -> armar En Vivo -> invitar usuarios.
+- Los pagos reales quedan fuera del alcance actual.
+- Si se despliega la demo en un ambiente con NODE_ENV=production, configurar
+  KLAVE_DEMO_MODE=true en variables de entorno para mantener registro directo.

@@ -20,6 +20,7 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
   const page = typeof params.page === 'string' ? Number(params.page) : 1
 
   const result = await listCanciones(user, { q, tags: tag ? [tag] : undefined, sort, page })
+  const canDelete = user.rol === 'ADMIN'
 
   // Build a URL helper that preserves current filters
   function filterUrl(overrides: Record<string, string | undefined>) {
@@ -107,7 +108,7 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
         {/* Song grid */}
         <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
           {(result.data as CancionDTO[]).map((c) => (
-            <CancionCard key={c.id} cancion={c} activeTag={tag} />
+            <CancionCard key={c.id} cancion={c} activeTag={tag} canDelete={canDelete} />
           ))}
           {result.data.length === 0 && (
             <p className="text-[13px] text-[#8b9099] col-span-full">No se encontraron canciones.</p>
