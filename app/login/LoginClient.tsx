@@ -41,11 +41,15 @@ export default function LoginClient({ googleEnabled }: Props) {
         password,
         redirect: false,
       })
-      if (res?.error) {
-        setError('Email o contraseña incorrectos.')
+      if (res?.error === 'CredentialsSignin') {
+        setError('Email o contraseña incorrectos, o cuenta sin acceso habilitado.')
+      } else if (!res || res.error || !res.ok) {
+        setError('No pudimos iniciar sesión. Intentá nuevamente en unos minutos.')
       } else {
         router.push('/')
       }
+    } catch {
+      setError('No pudimos conectar con el servidor. Revisá tu conexión e intentá nuevamente.')
     } finally {
       setLoading(false)
     }

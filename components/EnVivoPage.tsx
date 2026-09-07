@@ -51,7 +51,8 @@ export function EnVivoPage({ initialState, user }: Props) {
 
   const loadSong = useCallback(async (cancionId: string, tono: Tonalidad): Promise<SongData> => {
     try {
-      const res  = await fetch(`/api/canciones/${cancionId}?tono=${tono}`)
+      const query = new URLSearchParams({ tono })
+      const res  = await fetch(`/api/canciones/${cancionId}?${query}`)
       const json = await res.json()
       return json.ok ? json.data : null
     } catch {
@@ -143,7 +144,7 @@ export function EnVivoPage({ initialState, user }: Props) {
   const viewerNode = (
     <div className="flex-1 bg-[#1c2026] border border-[#3a3f47] rounded-xl overflow-hidden flex flex-col">
       {song ? (
-        <SongViewer cancion={song} sinAcordes={user.rol === 'MULTIMEDIA'} />
+        <SongViewer cancion={song} sinAcordes={user.rol === 'MULTIMEDIA'} rememberTone={false} />
       ) : (
         <div className="flex-1 flex items-center justify-center text-[#8b9099] text-[13px] text-center px-6">
           {evState.canciones.length === 0
