@@ -1,5 +1,6 @@
 import { verifySession } from '@/lib/dal'
 import { getEnVivoHistorial } from '@/services/envivo'
+import { DuplicateEnVivoButton } from '@/components/DuplicateEnVivoButton'
 import Link from 'next/link'
 
 export default async function HistorialPage({
@@ -12,6 +13,7 @@ export default async function HistorialPage({
   const page   = typeof params.page === 'string' ? Number(params.page) : 1
 
   const result = await getEnVivoHistorial(user, { page })
+  const isAdmin = user.rol === 'ADMIN'
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -42,6 +44,11 @@ export default async function HistorialPage({
                   {ev.canciones.length} {ev.canciones.length === 1 ? 'canción' : 'canciones'}
                 </span>
               </div>
+              {isAdmin && ev.id && (
+                <div className="mb-2">
+                  <DuplicateEnVivoButton sessionId={ev.id} />
+                </div>
+              )}
               {ev.canciones.length > 0 && (
                 <ol className="space-y-0.5 mt-2">
                   {ev.canciones.map((c, i) => (

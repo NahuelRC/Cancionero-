@@ -1,6 +1,7 @@
 import { verifySession } from '@/lib/dal'
 import { listCanciones } from '@/services/canciones'
 import { CancionCard } from '@/components/CancionCard'
+import { RepertorioSetBuilder } from '@/components/RepertorioSetBuilder'
 import Link from 'next/link'
 import type { CancionDTO } from '@/types'
 
@@ -131,6 +132,10 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
               Archivadas <span className="text-[13px] leading-none">x</span>
             </Link>
           </div>
+        )}
+
+        {user.rol === 'ADMIN' && !archived && (
+          <RepertorioSetBuilder canciones={result.data as CancionDTO[]} />
         )}
 
         {/* Song grid */}

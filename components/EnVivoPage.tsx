@@ -37,7 +37,7 @@ export function EnVivoPage({ initialState, user }: Props) {
   const [mobileTab, setMobileTab]   = useState<'set' | 'vista'>('set')
 
   const isAdmin      = user.rol === 'ADMIN'
-  const canNavigate  = user.rol !== 'MULTIMEDIA'
+  const canControlLiveState = isAdmin
   const { canciones, cancionActivaIdx } = evState
 
   const fetchState = useCallback(async () => {
@@ -179,7 +179,7 @@ export function EnVivoPage({ initialState, user }: Props) {
         <SetListPanel
           evState={evState}
           isAdmin={isAdmin}
-          canNavigate={canNavigate}
+          canControlLiveState={canControlLiveState}
           loading={loading}
           patch={patch}
           onSongSelected={() => setMobileTab('vista')}
@@ -194,7 +194,7 @@ export function EnVivoPage({ initialState, user }: Props) {
             <SetListPanel
               evState={evState}
               isAdmin={isAdmin}
-              canNavigate={canNavigate}
+              canControlLiveState={canControlLiveState}
               loading={loading}
               patch={patch}
               onSongSelected={() => setMobileTab('vista')}
@@ -220,12 +220,56 @@ function PageHeader({
   loading: boolean
   patch: (op: object) => void
 }) {
+  const [nameDraft, setNameDraft] = useState(evState.nombre)
+  const [editingName, setEditingName] = useState(false)
+
+  function submitRename() {
+    const nombre = nameDraft.trim()
+    if (!nombre || nombre === evState.nombre) {
+      setEditingName(false)
+      setNameDraft(evState.nombre)
+      return
+    }
+    patch({ op: 'rename', nombre })
+    setEditingName(false)
+  }
+
   return (
     <div className="flex items-center justify-between px-[22px] py-4 border-b border-[#3a3f47]">
       <div>
-        <h2 className="font-serif font-semibold text-[18px] m-0">
-          {evState.activo ? evState.nombre || 'En vivo' : 'En vivo'}
-        </h2>
+        {isAdmin && evState.activo && editingName ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              submitRename()
+            }}
+            className="flex items-center gap-2"
+          >
+            <input
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={submitRename}
+              maxLength={100}
+              autoFocus
+              className="w-[min(56vw,320px)] rounded-lg border border-[#3a3f47] bg-[#262b33] px-2.5 py-1 text-[14px] text-[#f4f1e8] outline-none focus:border-[#e8a33d]"
+            />
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              if (!isAdmin || !evState.activo) return
+              setNameDraft(evState.nombre)
+              setEditingName(true)
+            }}
+            className="block text-left"
+            disabled={!isAdmin || !evState.activo}
+          >
+            <h2 className="font-serif font-semibold text-[18px] m-0">
+              {evState.activo ? evState.nombre || 'En vivo' : 'En vivo'}
+            </h2>
+          </button>
+        )}
         <p className="text-[12px] text-[#8b9099] mt-0.5">
           {evState.activo
             ? `${fmt(evState.fecha)} · ${evState.canciones.length} ${evState.canciones.length === 1 ? 'canción' : 'canciones'}`
@@ -318,11 +362,11 @@ function CreateSessionPanel({ onCreated }: { onCreated: (s: EnVivoState) => void
 // ─── Set list panel ───────────────────────────────────────────────────────────
 
 function SetListPanel({
-  evState, isAdmin, canNavigate, loading, patch, onSongSelected,
+  evState, isAdmin, canControlLiveState, loading, patch, onSongSelected,
 }: {
   evState: EnVivoState
   isAdmin: boolean
-  canNavigate: boolean
+  canControlLiveState: boolean
   loading: boolean
   patch: (op: object) => void
   onSongSelected?: () => void
@@ -387,12 +431,12 @@ function SetListPanel({
               {/* Title + key — clickable for navigation */}
               <button
                 onClick={() => {
-                  if (canNavigate || isAdmin) {
+                  if (canControlLiveState) {
                     patch({ op: 'setActive', idx })
                     onSongSelected?.()
                   }
                 }}
-                disabled={(!canNavigate && !isAdmin) || loading}
+                disabled={!canControlLiveState || loading}
                 className="flex-1 text-left min-w-0 cursor-pointer disabled:cursor-default"
               >
                 <p className="text-[12.5px] m-0 leading-tight truncate">{item.titulo}</p>

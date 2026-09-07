@@ -6,6 +6,11 @@ Dejar la aplicacion operativa para una demo interna sin pagos reales. Esta lista
 incluye solo desarrollo de producto/configuracion. QA/testing queda fuera por
 decision del proyecto y se retomara en otra fase.
 
+Credenciales de prueba confirmadas en la DB de demo:
+- Admin: admin@demo.com / Admin1234
+- Musico: musico@demo.com / Musico1234
+- Nota: Admin@test.com y musico@test.com no existen actualmente en la DB de demo.
+
 
 FASE 1 - MODO DEMO Y REGISTRO DIRECTO
 -------------------------------------
@@ -84,16 +89,16 @@ FASE 4 - EN VIVO PARA DEMO INTERNA
 ----------------------------------
 Prioridad: media/alta
 
-[ ] Revisar permisos de En Vivo
-    - Confirmar si MUSICIAN puede cambiar cancion activa y tono.
-    - Si no corresponde, limitar esas acciones a ADMIN.
+[x] Revisar permisos de En Vivo
+    - MUSICIAN y MULTIMEDIA quedan como espectadores del estado en vivo.
+    - Solo ADMIN puede cambiar cancion activa, tono, set y estado de sesion.
 
-[ ] Mejorar experiencia de set
+[x] Mejorar experiencia de set
     - Renombrar sesion activa.
     - Duplicar set desde una sesion anterior.
     - Crear set desde canciones seleccionadas en repertorio.
 
-[ ] Mantener SSE/polling actual para demo
+[x] Mantener SSE/polling actual para demo
     - No migrar a Change Streams todavia.
     - Parametrizar intervalos solo si molesta durante la demo.
 

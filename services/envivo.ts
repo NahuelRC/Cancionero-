@@ -6,6 +6,10 @@ import { ForbiddenError, NotFoundError } from '@/lib/errors'
 import type { EnVivoState, EnVivoSetItem, TenantSessionUser, Tonalidad, PaginatedResponse } from '@/types'
 import type { Types } from 'mongoose'
 
+function assertAdmin(user: TenantSessionUser) {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+}
+
 async function populateSetItems(
   canciones: Array<{ cancionId: Types.ObjectId; tono: string }>,
 ): Promise<EnVivoSetItem[]> {
@@ -91,11 +95,13 @@ export async function getEnVivoHistorial(
 
 export async function createEnVivo(
   user: TenantSessionUser,
-  data: { nombre?: string; fecha?: string },
+  data: { nombre?: string; fecha?: string; cancionIds?: string[] },
 ): Promise<EnVivoState> {
-  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+  assertAdmin(user)
 
   await connectDB()
+
+  const canciones = await buildSetItems(user, data.cancionIds ?? [])
 
   // Deactivate any existing active session
   await EnVivo.updateMany({ iglesiaId: user.iglesiaId, activo: true }, { $set: { activo: false } })
@@ -105,18 +111,95 @@ export async function createEnVivo(
     nombre:          data.nombre ?? 'Sesión',
     fecha:           data.fecha ? new Date(data.fecha) : new Date(),
     activo:          true,
-    canciones:       [],
-    cancionActivaIdx: -1,
+    canciones,
+    cancionActivaIdx: canciones.length > 0 ? 0 : -1,
   })
 
   return toState(doc)
+}
+
+export async function duplicateEnVivoFromHistory(
+  user: TenantSessionUser,
+  sourceSessionId: string,
+  data: { nombre?: string; fecha?: string } = {},
+): Promise<EnVivoState> {
+  assertAdmin(user)
+
+  await connectDB()
+
+  const source = await EnVivo.findOne({
+    _id: sourceSessionId,
+    iglesiaId: user.iglesiaId,
+    activo: false,
+  }).lean()
+  if (!source) throw new NotFoundError('Sesion anterior')
+
+  await EnVivo.updateMany({ iglesiaId: user.iglesiaId, activo: true }, { $set: { activo: false } })
+
+  const canciones = source.canciones.map((item) => ({
+    cancionId: item.cancionId,
+    tono: item.tono,
+  }))
+  const canUseSourceActiveIdx = source.cancionActivaIdx >= 0 && source.cancionActivaIdx < canciones.length
+
+  const doc = await EnVivo.create({
+    iglesiaId: user.iglesiaId,
+    nombre: data.nombre ?? `Copia de ${source.nombre || 'sesion'}`,
+    fecha: data.fecha ? new Date(data.fecha) : new Date(),
+    activo: true,
+    canciones,
+    cancionActivaIdx: canUseSourceActiveIdx ? source.cancionActivaIdx : canciones.length > 0 ? 0 : -1,
+  })
+
+  return toState(doc)
+}
+
+export async function renameEnVivo(
+  user: TenantSessionUser,
+  nombre: string,
+): Promise<EnVivoState> {
+  assertAdmin(user)
+
+  await connectDB()
+
+  const doc = await EnVivo.findOneAndUpdate(
+    { iglesiaId: user.iglesiaId, activo: true },
+    { $set: { nombre } },
+    { new: true },
+  )
+
+  if (!doc) throw new NotFoundError('Sesion activa')
+  return toState(doc)
+}
+
+async function buildSetItems(
+  user: TenantSessionUser,
+  cancionIds: string[],
+): Promise<Array<{ cancionId: string; tono: Tonalidad }>> {
+  if (cancionIds.length === 0) return []
+
+  const uniqueIds = [...new Set(cancionIds)]
+  const docs = await Cancion.find({
+    _id: { $in: uniqueIds },
+    iglesiaId: user.iglesiaId,
+    $or: [{ archivedAt: null }, { archivedAt: { $exists: false } }],
+  }).select('_id tono').lean()
+
+  if (docs.length !== uniqueIds.length) throw new NotFoundError('Cancion')
+
+  const byId = new Map(docs.map((doc) => [doc._id.toString(), doc]))
+  return uniqueIds.map((id) => {
+    const song = byId.get(id)
+    if (!song) throw new NotFoundError('Cancion')
+    return { cancionId: id, tono: song.tono as Tonalidad }
+  })
 }
 
 export async function addCancionToSet(
   user: TenantSessionUser,
   cancionId: string,
 ): Promise<EnVivoState> {
-  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+  assertAdmin(user)
 
   await connectDB()
 
@@ -137,7 +220,7 @@ export async function removeCancionFromSet(
   user: TenantSessionUser,
   idx: number,
 ): Promise<EnVivoState> {
-  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+  assertAdmin(user)
 
   await connectDB()
 
@@ -163,7 +246,7 @@ export async function moveCancionInSet(
   fromIdx: number,
   toIdx: number,
 ): Promise<EnVivoState> {
-  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+  assertAdmin(user)
 
   await connectDB()
 
@@ -199,7 +282,7 @@ export async function setActiveCancion(
   user: TenantSessionUser,
   idx: number,
 ): Promise<EnVivoState> {
-  if (user.rol === 'MULTIMEDIA') throw new ForbiddenError()
+  assertAdmin(user)
 
   await connectDB()
 
@@ -218,7 +301,7 @@ export async function updateCancionTono(
   idx: number,
   tono: Tonalidad,
 ): Promise<EnVivoState> {
-  if (user.rol === 'MULTIMEDIA') throw new ForbiddenError()
+  assertAdmin(user)
 
   await connectDB()
 
@@ -232,7 +315,7 @@ export async function updateCancionTono(
 }
 
 export async function stopEnVivo(user: TenantSessionUser): Promise<EnVivoState> {
-  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+  assertAdmin(user)
 
   await connectDB()
 
