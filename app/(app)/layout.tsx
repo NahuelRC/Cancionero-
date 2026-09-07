@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       <div className="flex flex-col h-full bg-[#14171c]">
         <div className="flex flex-1 min-h-0">
           <Sidebar user={user} iglesiaName={iglesiaName} />
-          <main className="flex-1 flex flex-col overflow-hidden">
+          <main className="min-w-0 flex-1 flex flex-col overflow-hidden">
             {children}
           </main>
         </div>

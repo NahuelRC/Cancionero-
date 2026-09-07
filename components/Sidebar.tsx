@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import type { SessionUser } from '@/types'
 import { useLogout } from './useLogout'
@@ -19,6 +20,7 @@ interface Props {
 
 export function Sidebar({ user, iglesiaName }: Props) {
   const pathname = usePathname()
+  const [collapsed, setCollapsed] = useState(false)
   const { isLoggingOut, logout } = useLogout()
 
   const initials = user.nombre
@@ -36,57 +38,71 @@ export function Sidebar({ user, iglesiaName }: Props) {
   }
 
   return (
-    <aside className="hidden md:flex w-[210px] flex-shrink-0 bg-[#101317] border-r border-[#3a3f47] flex-col px-3 py-[18px]">
-      <div className="font-serif font-bold text-[18px] text-[#e8a33d] px-2 pb-[18px]">Klave</div>
-      <div className="text-[11px] text-[#8b9099] px-2 pb-4 border-b border-[#3a3f47] mb-3">
-        {iglesiaName}
-      </div>
-
-      <nav className="flex flex-col gap-0.5">
-        {NAV_ITEMS.map(({ href, label, icon }) => {
-          // Hide Usuarios from non-admins
-          if (href === '/usuarios' && user.rol !== 'ADMIN') return null
-          // Hide Subir from multimedia
-          if (href === '/subir' && user.rol === 'MULTIMEDIA') return null
-
-          const active = pathname.startsWith(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-[10px] px-[10px] py-[9px] rounded-lg text-[13.5px] transition-colors ${
-                active
-                  ? 'bg-[#e8a33d]/14 text-[#e8a33d]'
-                  : 'text-[#c9cdd3] hover:bg-[#262b33]'
-              }`}
-            >
-              <span className="w-4 text-center text-[14px]">{icon}</span>
-              {label}
-            </Link>
-          )
-        })}
-      </nav>
-
-      <div className="flex-1" />
-
-      <div className="flex items-center gap-2 pt-3 border-t border-[#3a3f47]">
-        <div className="w-[26px] h-[26px] rounded-full bg-[#4f8a7b] flex items-center justify-center text-[11px] font-semibold text-[#0c231d] flex-shrink-0">
-          {initials}
+    <aside className={`hidden md:flex flex-shrink-0 bg-[#101317] border-r border-[#3a3f47] flex-col py-[18px] ${collapsed ? 'w-12 px-1.5' : 'w-[210px] px-3'}`}>
+      <button
+        type="button"
+        onClick={() => setCollapsed((value) => !value)}
+        aria-expanded={!collapsed}
+        aria-controls="sidebar-content"
+        aria-label={collapsed ? 'Mostrar navegación' : 'Ocultar navegación'}
+        title={collapsed ? 'Mostrar navegación' : 'Ocultar navegación'}
+        className="mb-4 flex min-h-9 items-center justify-center gap-2 rounded-lg border border-[#3a3f47] px-2 text-[12px] text-[#8b9099] hover:text-[#f4f1e8] hover:border-[#8b9099] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e8a33d] cursor-pointer"
+      >
+        <span aria-hidden="true">{collapsed ? '»' : '«'}</span>
+        {!collapsed && 'Ocultar navegación'}
+      </button>
+      <div id="sidebar-content" hidden={collapsed} className={collapsed ? 'hidden' : 'flex min-h-0 flex-1 flex-col'}>
+        <div className="font-serif font-bold text-[18px] text-[#e8a33d] px-2 pb-[18px]">Klave</div>
+        <div className="text-[11px] text-[#8b9099] px-2 pb-4 border-b border-[#3a3f47] mb-3">
+          {iglesiaName}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[12px] truncate">{user.nombre}</div>
-          <div className="text-[10.5px] text-[#8b9099]">{rolLabel[user.rol]}</div>
+
+        <nav className="flex flex-col gap-0.5">
+          {NAV_ITEMS.map(({ href, label, icon }) => {
+            // Hide Usuarios from non-admins
+            if (href === '/usuarios' && user.rol !== 'ADMIN') return null
+            // Hide Subir from multimedia
+            if (href === '/subir' && user.rol === 'MULTIMEDIA') return null
+
+            const active = pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-[10px] px-[10px] py-[9px] rounded-lg text-[13.5px] transition-colors ${
+                  active
+                    ? 'bg-[#e8a33d]/14 text-[#e8a33d]'
+                    : 'text-[#c9cdd3] hover:bg-[#262b33]'
+                }`}
+              >
+                <span className="w-4 text-center text-[14px]">{icon}</span>
+                {label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="flex-1" />
+
+        <div className="flex items-center gap-2 pt-3 border-t border-[#3a3f47]">
+          <div className="w-[26px] h-[26px] rounded-full bg-[#4f8a7b] flex items-center justify-center text-[11px] font-semibold text-[#0c231d] flex-shrink-0">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] truncate">{user.nombre}</div>
+            <div className="text-[10.5px] text-[#8b9099]">{rolLabel[user.rol]}</div>
+          </div>
+          <button
+            type="button"
+            onClick={logout}
+            disabled={isLoggingOut}
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            className="text-[#8b9099] hover:text-[#f4f1e8] text-[12px] cursor-pointer disabled:cursor-default disabled:opacity-50"
+          >
+            ⏻
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={logout}
-          disabled={isLoggingOut}
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
-          className="text-[#8b9099] hover:text-[#f4f1e8] text-[12px] cursor-pointer disabled:cursor-default disabled:opacity-50"
-        >
-          ⏻
-        </button>
       </div>
     </aside>
   )

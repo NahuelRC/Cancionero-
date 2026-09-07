@@ -14,33 +14,44 @@ type Props = {
   cancion: CancionDTO | CancionSinAcordesDTO
   /** Role-stripped: true means no chords in data */
   sinAcordes?: boolean
+  /** Event tones take precedence over saved repertoire preferences. */
+  rememberTone?: boolean
 }
 
 const LS_KEY = (id: string) => `klave:tone:${id}`
 
-export function SongViewer({ cancion, sinAcordes = false }: Props) {
+export function SongViewer({ cancion, sinAcordes = false, rememberTone = true }: Props) {
   const savedTone = (() => {
-    if (typeof window === 'undefined') return cancion.tono
+    if (!rememberTone || typeof window === 'undefined') return cancion.tono
     const v = localStorage.getItem(LS_KEY(cancion.id))
     return (v && TONALIDADES.includes(v as Tonalidad) ? v as Tonalidad : cancion.tono)
   })()
 
   const [displayTone, setDisplayTone] = useState<Tonalidad>(savedTone)
+  const [toneSource, setToneSource] = useState({ id: cancion.id, tono: cancion.tono, rememberTone })
   const [mode, setMode]               = useState<'normal' | 'multimedia'>('normal')
   const [hideChords, setHideChords]   = useState(false)
   const [scaleIdx, setScaleIdx]       = useState(2) // default = 1×
+
+  // Reset transposition when the song or the event's base tone changes.
+  // Keep view mode, chord visibility and text size intact.
+  if (toneSource.id !== cancion.id || toneSource.tono !== cancion.tono || toneSource.rememberTone !== rememberTone) {
+    setToneSource({ id: cancion.id, tono: cancion.tono, rememberTone })
+    setDisplayTone(savedTone)
+  }
 
   const semitones = semitonesBetween(cancion.tono, displayTone)
   const scale     = TEXT_SCALES[scaleIdx]
 
   // Persist chosen tone
   useEffect(() => {
+    if (!rememberTone) return
     if (displayTone === cancion.tono) {
       localStorage.removeItem(LS_KEY(cancion.id))
     } else {
       localStorage.setItem(LS_KEY(cancion.id), displayTone)
     }
-  }, [displayTone, cancion.id, cancion.tono])
+  }, [displayTone, cancion.id, cancion.tono, rememberTone])
 
   function shiftDisplay(delta: number) {
     const idx = TONALIDADES.indexOf(displayTone)

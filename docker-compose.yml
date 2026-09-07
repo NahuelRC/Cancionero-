@@ -1,0 +1,12 @@
+services:
+  mongodb:
+    image: mongo:8
+    container_name: klave-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - klave-mongodb-data:/data/db
+
+volumes:
+  klave-mongodb-data:
