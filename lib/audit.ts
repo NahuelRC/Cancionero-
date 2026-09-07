@@ -11,6 +11,7 @@ type AuditAction =
   | 'usuario.update'
   | 'usuario.deactivate'
   | 'usuario.reactivate'
+  | 'usuario.password_reset'
   | 'envivo.create'
   | 'envivo.stop'
   | 'invitacion.send'

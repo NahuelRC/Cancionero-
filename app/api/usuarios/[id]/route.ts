@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireTenant } from '@/lib/dal'
-import { updateUsuarioPerfil, updateUsuarioRol, deactivateUsuario, reactivateUsuario } from '@/services/usuarios'
+import { updateUsuarioPerfil, updateUsuarioRol, deactivateUsuario, reactivateUsuario, resetUsuarioPassword } from '@/services/usuarios'
 import { logAction } from '@/lib/audit'
 import { toApiError } from '@/lib/errors'
 import { TENANT_USER_ROLES, normalizeRole } from '@/types'
 const PatchSchema = z.object({
+  action: z.literal('reset-password').optional(),
   nombre: z.string().min(2).max(100).trim().optional(),
   email: z.string().email().optional(),
   rol: z.preprocess(
@@ -26,6 +27,12 @@ export async function PATCH(
     const parsed = PatchSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ ok: false, message: 'Datos inválidos', issues: parsed.error.flatten() }, { status: 422 })
+    }
+
+    if (parsed.data.action === 'reset-password') {
+      const result = await resetUsuarioPassword(user, id)
+      void logAction(user, 'usuario.password_reset', { id, type: 'Usuario' })
+      return NextResponse.json({ ok: true, data: result })
     }
 
     if (parsed.data.activo === false) {

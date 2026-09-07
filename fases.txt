@@ -48,12 +48,12 @@ Prioridad: alta
     - Revocar invitacion.
     - Regenerar token si expiro.
 
-[ ] Completar ciclo de usuarios
+[x] Completar ciclo de usuarios
     - Reactivar usuarios desactivados.
     - Cambiar nombre/email si corresponde.
     - Resetear password o enviar link de recuperacion.
 
-[ ] Proteger reglas criticas de administracion
+[x] Proteger reglas criticas de administracion
     - No permitir que una iglesia quede sin ADMIN activo.
     - Confirmar cambios sensibles con mensajes claros.
 

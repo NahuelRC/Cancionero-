@@ -17,6 +17,10 @@ interface InviteResponseData {
   emailSent?: boolean
 }
 
+interface ResetPasswordResponseData {
+  temporaryPassword?: string
+}
+
 interface InvitacionDTO {
   id: string
   email: string
@@ -33,6 +37,13 @@ const ROL_LABEL: Record<TenantUserRole, string> = {
 }
 const INVITABLE_ROLES: TenantUserRole[] = ['MUSICIAN', 'MULTIMEDIA', 'ADMIN']
 
+type FeedbackState = {
+  type: 'ok' | 'err'
+  msg: string
+  inviteUrl?: string
+  temporaryPassword?: string
+}
+
 export default function UsuariosPage() {
   const [usuarios, setUsuarios]     = useState<UsuarioDTO[]>([])
   const [invitaciones, setInvitaciones] = useState<InvitacionDTO[]>([])
@@ -45,7 +56,7 @@ export default function UsuariosPage() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [editNombre, setEditNombre] = useState('')
   const [editEmail, setEditEmail] = useState('')
-  const [feedback, setFeedback]     = useState<{ type: 'ok' | 'err'; msg: string; inviteUrl?: string } | null>(null)
+  const [feedback, setFeedback]     = useState<FeedbackState | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -109,6 +120,9 @@ export default function UsuariosPage() {
   }
 
   async function changeRol(id: string, rol: TenantUserRole) {
+    const target = usuarios.find((u) => u.id === id)
+    if (!confirm(`Cambiar rol de ${target?.nombre ?? 'este usuario'} a ${ROL_LABEL[rol]}?`)) return
+
     setUserActionId(id)
     setFeedback(null)
     try {
@@ -135,13 +149,20 @@ export default function UsuariosPage() {
   }
 
   async function saveUser(id: string) {
+    const target = usuarios.find((u) => u.id === id)
+    const nextEmail = editEmail.trim().toLowerCase()
+    if (target && nextEmail !== target.email.toLowerCase()) {
+      const ok = confirm(`Cambiar email de ${target.nombre} a ${nextEmail}? Debera iniciar sesion con el nuevo email.`)
+      if (!ok) return
+    }
+
     setUserActionId(id)
     setFeedback(null)
     try {
       const res = await fetch(`/api/usuarios/${id}`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ nombre: editNombre, email: editEmail }),
+        body:    JSON.stringify({ nombre: editNombre.trim(), email: nextEmail }),
       })
       const json = await res.json()
       if (json.ok) {
@@ -183,6 +204,34 @@ export default function UsuariosPage() {
 
   async function reactivate(id: string) {
     await setUserActive(id, true)
+  }
+
+  async function resetPassword(user: UsuarioDTO) {
+    const ok = confirm(`Generar una nueva password temporal para ${user.nombre}? La password anterior dejara de funcionar.`)
+    if (!ok) return
+
+    setUserActionId(user.id)
+    setFeedback(null)
+    try {
+      const res = await fetch(`/api/usuarios/${user.id}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ action: 'reset-password' }),
+      })
+      const json = await res.json()
+      if (json.ok) {
+        const data = json.data as ResetPasswordResponseData
+        setFeedback({
+          type: 'ok',
+          msg: `Password temporal generada para ${user.nombre}. Copiala ahora y compartila por un canal seguro.`,
+          temporaryPassword: data.temporaryPassword,
+        })
+      } else {
+        setFeedback({ type: 'err', msg: json.message })
+      }
+    } finally {
+      setUserActionId(null)
+    }
   }
 
   async function resendInvitation(invitation: InvitacionDTO) {
@@ -230,6 +279,8 @@ export default function UsuariosPage() {
     }
   }
 
+  const feedbackCopyValue = feedback?.inviteUrl ?? feedback?.temporaryPassword
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-4 md:px-[22px] py-4 border-b border-[#3a3f47]">
@@ -269,16 +320,16 @@ export default function UsuariosPage() {
         {feedback && (
           <div className={`mb-4 text-[12.5px] rounded-lg px-3 py-2 ${feedback.type === 'ok' ? 'text-[#4f8a7b] bg-[#4f8a7b]/10 border border-[#4f8a7b]/30' : 'text-[#d9694f] bg-[#d9694f]/10 border border-[#d9694f]/30'}`}>
             {feedback.msg}
-            {feedback.inviteUrl && (
+            {feedbackCopyValue && (
               <div className="mt-2 flex flex-col sm:flex-row gap-2">
                 <input
                   readOnly
-                  value={feedback.inviteUrl}
+                  value={feedbackCopyValue}
                   className="flex-1 min-w-0 px-2 py-1.5 rounded-md border border-[#3a3f47] bg-[#101317] text-[#c9cdd3] text-[11.5px]"
                 />
                 <button
                   type="button"
-                  onClick={() => navigator.clipboard?.writeText(feedback.inviteUrl!)}
+                  onClick={() => navigator.clipboard?.writeText(feedbackCopyValue)}
                   className="px-3 py-1.5 rounded-md border border-[#4f8a7b]/40 text-[#4f8a7b] text-[11.5px] cursor-pointer"
                 >
                   Copiar
@@ -457,6 +508,14 @@ export default function UsuariosPage() {
                               Reactivar
                             </button>
                           )}
+                          <button
+                            type="button"
+                            disabled={userActionId === u.id}
+                            onClick={() => resetPassword(u)}
+                            className="text-[11.5px] text-[#8b9099] hover:text-[#f4f1e8] cursor-pointer bg-transparent border-none disabled:opacity-50"
+                          >
+                            Reset password
+                          </button>
                         </>
                       )}
                     </div>

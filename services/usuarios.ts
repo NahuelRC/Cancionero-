@@ -1,4 +1,5 @@
 import 'server-only'
+import { randomBytes } from 'crypto'
 import { connectDB } from '@/lib/db'
 import { Usuario } from '@/models/Usuario'
 import { ForbiddenError, NotFoundError, ConflictError } from '@/lib/errors'
@@ -15,6 +16,10 @@ export interface UsuarioDTO {
   rol: TenantUserRole
   activo: boolean
   createdAt: string
+}
+
+export interface ResetUsuarioPasswordResult {
+  temporaryPassword: string
 }
 
 function toDTO(doc: InstanceType<typeof Usuario>): UsuarioDTO {
@@ -34,6 +39,10 @@ export async function listUsuarios(user: TenantSessionUser): Promise<UsuarioDTO[
   await connectDB()
   const docs = await Usuario.find({ iglesiaId: user.iglesiaId }).sort({ nombre: 1 })
   return docs.map(toDTO)
+}
+
+function createTemporaryPassword(): string {
+  return `Klave-${randomBytes(9).toString('base64url')}-1`
 }
 
 export async function updateUsuarioRol(
@@ -114,6 +123,25 @@ export async function reactivateUsuario(user: TenantSessionUser, targetId: strin
   target.status = 'ACTIVE'
   await target.save()
   return toDTO(target)
+}
+
+export async function resetUsuarioPassword(
+  user: TenantSessionUser,
+  targetId: string,
+): Promise<ResetUsuarioPasswordResult> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+
+  await connectDB()
+
+  const target = await Usuario.findOne({ _id: targetId, iglesiaId: user.iglesiaId })
+  if (!target) throw new NotFoundError('Usuario')
+
+  const temporaryPassword = createTemporaryPassword()
+  const { hash } = await import('bcryptjs')
+  target.passwordHash = await hash(temporaryPassword, 12)
+  await target.save()
+
+  return { temporaryPassword }
 }
 
 export async function getOrCreateFromOAuth(opts: {
