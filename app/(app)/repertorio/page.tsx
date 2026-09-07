@@ -18,16 +18,17 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
   const tag  = str(params.tag)
   const sort = str(params.sort) ?? 'reciente'
   const page = typeof params.page === 'string' ? Number(params.page) : 1
+  const archived = user.rol === 'ADMIN' && str(params.archived) === '1'
 
-  const result = await listCanciones(user, { q, tags: tag ? [tag] : undefined, sort, page })
+  const result = await listCanciones(user, { q, tags: tag ? [tag] : undefined, sort, page, archived: archived ? 'archived' : 'active' })
   const canDelete = user.rol === 'ADMIN'
   const canUpload = user.rol !== 'MULTIMEDIA'
-  const hasActiveFilters = Boolean(q || tag)
+  const hasActiveFilters = Boolean(q || tag || archived)
 
   // Build a URL helper that preserves current filters
   function filterUrl(overrides: Record<string, string | undefined>) {
     const p = new URLSearchParams()
-    const merged = { q, tag, sort: sort === 'reciente' ? undefined : sort, ...overrides }
+    const merged = { q, tag, sort: sort === 'reciente' ? undefined : sort, archived: archived ? '1' : undefined, ...overrides }
     for (const [k, v] of Object.entries(merged)) {
       if (v) p.set(k, v)
     }
@@ -49,6 +50,7 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
           <form className="flex gap-2 flex-1 min-w-[200px]" method="GET">
             {tag && <input type="hidden" name="tag" value={tag} />}
             {sort !== 'reciente' && <input type="hidden" name="sort" value={sort} />}
+            {archived && <input type="hidden" name="archived" value="1" />}
             <input
               name="q"
               defaultValue={q}
@@ -79,6 +81,18 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
               </Link>
             ))}
           </div>
+          {user.rol === 'ADMIN' && (
+            <Link
+              href={filterUrl({ archived: archived ? undefined : '1', page: undefined })}
+              className={`px-[10px] py-[7px] rounded-lg border text-[12px] no-underline transition-colors ${
+                archived
+                  ? 'border-[#d9694f] text-[#d9694f] bg-[#d9694f]/10'
+                  : 'border-[#3a3f47] text-[#8b9099] hover:text-[#f4f1e8]'
+              }`}
+            >
+              Archivadas
+            </Link>
+          )}
         </div>
 
         {/* Active tag filter chip */}
@@ -107,13 +121,27 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
           </div>
         )}
 
+        {archived && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[12px] text-[#8b9099]">Vista:</span>
+            <Link
+              href={filterUrl({ archived: undefined, page: undefined })}
+              className="inline-flex items-center gap-1 bg-[#d9694f]/15 border border-[#d9694f]/40 text-[#d9694f] px-[9px] py-[4px] rounded-full text-[11.5px] no-underline hover:bg-[#d9694f]/20"
+            >
+              Archivadas <span className="text-[13px] leading-none">x</span>
+            </Link>
+          </div>
+        )}
+
         {/* Song grid */}
         <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
           {(result.data as CancionDTO[]).map((c) => (
             <CancionCard key={c.id} cancion={c} activeTag={tag} canDelete={canDelete} />
           ))}
           {result.data.length === 0 && hasActiveFilters && (
-            <p className="text-[13px] text-[#8b9099] col-span-full">No se encontraron canciones.</p>
+            <p className="text-[13px] text-[#8b9099] col-span-full">
+              {archived ? 'No hay canciones archivadas.' : 'No se encontraron canciones.'}
+            </p>
           )}
           {result.data.length === 0 && !hasActiveFilters && (
             <div className="col-span-full rounded-[10px] border border-[#3a3f47] bg-[#1c2026] px-4 py-5">

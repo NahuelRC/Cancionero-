@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireTenant } from '@/lib/dal'
-import { getCancion, updateCancion, deleteCancion } from '@/services/canciones'
+import { getCancion, updateCancion, deleteCancion, restoreCancion } from '@/services/canciones'
 import { logAction } from '@/lib/audit'
 import { toApiError } from '@/lib/errors'
 const TONALIDADES = ['C','C#','Db','D','D#','Eb','E','F','F#','Gb','G','G#','Ab','A','A#','Bb','B'] as const
@@ -22,6 +22,7 @@ const SectionSchema = z.object({
 })
 
 const PatchSchema = z.object({
+  action: z.literal('restore').optional(),
   titulo:    z.string().min(1).max(200).optional(),
   artista:   z.string().max(100).optional(),
   tono:      z.enum(TONALIDADES).optional(),
@@ -59,6 +60,12 @@ export async function PATCH(
     if (!parsed.success) {
       return NextResponse.json({ ok: false, message: 'Datos inválidos', issues: parsed.error.flatten() }, { status: 422 })
     }
+    if (parsed.data.action === 'restore') {
+      const cancion = await restoreCancion(user, id)
+      void logAction(user, 'cancion.restore', { id, type: 'Cancion' })
+      return NextResponse.json({ ok: true, data: cancion })
+    }
+
     const cancion = await updateCancion(user, id, parsed.data as Parameters<typeof updateCancion>[2])
     void logAction(user, 'cancion.update', { id, type: 'Cancion' })
     return NextResponse.json({ ok: true, data: cancion })
@@ -76,7 +83,7 @@ export async function DELETE(
     const { id } = await ctx.params
     const user = await requireTenant(['ADMIN'])
     await deleteCancion(user, id)
-    void logAction(user, 'cancion.delete', { id, type: 'Cancion' })
+    void logAction(user, 'cancion.archive', { id, type: 'Cancion' })
     return NextResponse.json({ ok: true, data: null })
   } catch (err) {
     const { message, statusCode } = toApiError(err)

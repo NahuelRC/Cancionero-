@@ -96,6 +96,7 @@ export interface CancionDTO {
   compas?: string
   secciones: SongSection[]
   tags: string[]
+  archivedAt?: string | null
   createdAt: string
   updatedAt: string
 }

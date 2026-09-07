@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { DeleteCancionButton } from './DeleteCancionButton'
+import { DeleteCancionButton, DuplicateCancionButton } from './DeleteCancionButton'
 import type { CancionDTO } from '@/types'
 
 export function CancionCard({
@@ -20,19 +20,29 @@ export function CancionCard({
         </Link>
         {canDelete && (
           <div className="flex flex-shrink-0 gap-1">
-            <Link
-              href={`/repertorio/${cancion.id}/editar`}
-              title="Editar cancion"
-              aria-label={`Editar ${cancion.titulo}`}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#3a3f47] text-[#8b9099] hover:text-[#f4f1e8] hover:border-[#8b9099]"
-            >
-              <PencilIcon />
-            </Link>
-            <DeleteCancionButton id={cancion.id} titulo={cancion.titulo} />
+            {!cancion.archivedAt && (
+              <>
+                <Link
+                  href={`/repertorio/${cancion.id}/editar`}
+                  title="Editar cancion"
+                  aria-label={`Editar ${cancion.titulo}`}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#3a3f47] text-[#8b9099] hover:text-[#f4f1e8] hover:border-[#8b9099]"
+                >
+                  <PencilIcon />
+                </Link>
+                <DuplicateCancionButton id={cancion.id} titulo={cancion.titulo} />
+              </>
+            )}
+            <DeleteCancionButton id={cancion.id} titulo={cancion.titulo} archived={Boolean(cancion.archivedAt)} />
           </div>
         )}
       </div>
       <div className="flex gap-1 flex-wrap">
+        {cancion.archivedAt && (
+          <span className="inline-flex items-center bg-[#d9694f]/15 border border-[#d9694f]/35 px-[7px] py-[3px] rounded-full text-[10.5px] text-[#d9694f]">
+            Archivada
+          </span>
+        )}
         <span className="inline-flex items-center bg-[#262b33] border border-[#3a3f47] px-[7px] py-[3px] rounded-full text-[10.5px] text-[#c9cdd3]">
           {cancion.tono}
         </span>

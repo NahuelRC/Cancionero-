@@ -13,6 +13,7 @@ export default async function CancionDetailPage({
   const cancion = await getCancion(user, id)
 
   const isAdmin = user.rol === 'ADMIN'
+  const archived = Boolean(cancion.archivedAt)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -20,9 +21,14 @@ export default async function CancionDetailPage({
         <Link href="/repertorio" className="text-[#8b9099] hover:text-[#f4f1e8] text-sm">
           ← Repertorio
         </Link>
+        {archived && (
+          <span className="text-[11.5px] px-2 py-1 rounded-full bg-[#d9694f]/15 border border-[#d9694f]/35 text-[#d9694f]">
+            Archivada
+          </span>
+        )}
         {isAdmin && (
           <div className="ml-auto">
-            <CancionActions id={id} titulo={cancion.titulo} />
+            <CancionActions id={id} titulo={cancion.titulo} archived={archived} />
           </div>
         )}
       </div>

@@ -23,6 +23,7 @@ function toDTO(doc: ICancion): CancionDTO {
     compas:    doc.compas,
     secciones: doc.secciones as SongSection[],
     tags:      doc.tags,
+    archivedAt: doc.archivedAt?.toISOString() ?? null,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   }
@@ -50,7 +51,7 @@ function escapeRegex(s: string): string {
 
 export async function listCanciones(
   user: TenantSessionUser,
-  opts: { page?: number; pageSize?: number; q?: string; tags?: string[]; sort?: string } = {},
+  opts: { page?: number; pageSize?: number; q?: string; tags?: string[]; sort?: string; archived?: 'active' | 'archived' | 'all' } = {},
 ): Promise<PaginatedResponse<CancionDTO | CancionSinAcordesDTO>> {
   await connectDB()
 
@@ -59,13 +60,26 @@ export async function listCanciones(
   const skip     = (page - 1) * pageSize
   const sortKey  = opts.sort && SORT_MAP[opts.sort] ? opts.sort : 'reciente'
 
+  const archivedFilter = opts.archived ?? 'active'
   const filter: QueryFilter<ICancion> = { iglesiaId: user.iglesiaId }
+  if (archivedFilter === 'active') {
+    filter.$or = [{ archivedAt: null }, { archivedAt: { $exists: false } }]
+  } else if (archivedFilter === 'archived') {
+    filter.archivedAt = { $exists: true, $ne: null }
+  }
+
   if (opts.q) {
     const safe = escapeRegex(opts.q)
-    filter.$or = [
+    const searchOr = [
       { titulo:  { $regex: safe, $options: 'i' } },
       { artista: { $regex: safe, $options: 'i' } },
     ]
+    if (filter.$or) {
+      filter.$and = [{ $or: filter.$or }, { $or: searchOr }]
+      delete filter.$or
+    } else {
+      filter.$or = searchOr
+    }
   }
   if (opts.tags?.length) filter.tags = { $all: opts.tags }
 
@@ -93,6 +107,8 @@ export async function getCancion(
 
   const doc = await Cancion.findOne({ _id: id, iglesiaId: user.iglesiaId }).lean()
   if (!doc) throw new NotFoundError('Canción')
+
+  if (doc.archivedAt && user.rol !== 'ADMIN') throw new NotFoundError('Cancion')
 
   let dto = toDTO(doc)
 
@@ -143,11 +159,55 @@ export async function updateCancion(
   return toDTO(doc)
 }
 
+export async function duplicateCancion(user: TenantSessionUser, id: string): Promise<CancionDTO> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+
+  await connectDB()
+
+  const original = await Cancion.findOne({ _id: id, iglesiaId: user.iglesiaId }).lean()
+  if (!original) throw new NotFoundError('Cancion')
+
+  const doc = await Cancion.create({
+    iglesiaId: user.iglesiaId,
+    creadoPor: user.id,
+    titulo: `${original.titulo} (copia)`,
+    artista: original.artista,
+    tono: original.tono,
+    bpm: original.bpm,
+    compas: original.compas,
+    secciones: original.secciones,
+    tags: original.tags,
+    archivedAt: null,
+    archivedBy: null,
+  })
+
+  return toDTO(doc)
+}
+
+export async function restoreCancion(user: TenantSessionUser, id: string): Promise<CancionDTO> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+
+  await connectDB()
+
+  const doc = await Cancion.findOneAndUpdate(
+    { _id: id, iglesiaId: user.iglesiaId },
+    { $set: { archivedAt: null, archivedBy: null } },
+    { new: true },
+  ).lean()
+
+  if (!doc) throw new NotFoundError('Cancion')
+  return toDTO(doc)
+}
+
 export async function deleteCancion(user: TenantSessionUser, id: string): Promise<void> {
   if (user.rol !== 'ADMIN') throw new ForbiddenError()
 
   await connectDB()
 
-  const result = await Cancion.deleteOne({ _id: id, iglesiaId: user.iglesiaId })
+  const result: { matchedCount: number; deletedCount?: number } = await Cancion.updateOne(
+    { _id: id, iglesiaId: user.iglesiaId },
+    { $set: { archivedAt: new Date(), archivedBy: user.id } },
+  )
+  result.deletedCount = result.matchedCount
   if (result.deletedCount === 0) throw new NotFoundError('Canción')
 }

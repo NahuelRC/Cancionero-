@@ -11,6 +11,7 @@ const QuerySchema = z.object({
   tags:     z.string().optional(), // comma-separated
   tag:      z.string().optional(), // single tag shorthand
   sort:     z.enum(['reciente', 'titulo', 'artista']).optional(),
+  archived: z.enum(['active', 'archived', 'all']).optional(),
 })
 
 export async function GET(req: NextRequest) {
@@ -21,12 +22,12 @@ export async function GET(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ ok: false, message: 'Parámetros inválidos', issues: parsed.error.flatten() }, { status: 422 })
     }
-    const { page, pageSize, q, tags, tag, sort } = parsed.data
+    const { page, pageSize, q, tags, tag, sort, archived } = parsed.data
     const tagList = [
       ...(tags?.split(',').map((t) => t.trim()).filter(Boolean) ?? []),
       ...(tag ? [tag] : []),
     ]
-    const result = await listCanciones(user, { page, pageSize, q, tags: tagList.length ? tagList : undefined, sort })
+    const result = await listCanciones(user, { page, pageSize, q, tags: tagList.length ? tagList : undefined, sort, archived })
     return NextResponse.json({ ok: true, data: result })
   } catch (err) {
     const { message, statusCode } = toApiError(err)

@@ -11,6 +11,8 @@ export interface ICancion extends Document {
   secciones: SongSection[]
   tags: string[]
   creadoPor: Types.ObjectId
+  archivedAt?: Date | null
+  archivedBy?: Types.ObjectId | null
   createdAt: Date
   updatedAt: Date
 }
@@ -54,11 +56,13 @@ const CancionSchema = new Schema<ICancion>(
     secciones:  { type: [SongSectionSchema], default: [] },
     tags:       { type: [String], default: [] },
     creadoPor:  { type: Schema.Types.ObjectId, ref: 'Usuario', required: true },
+    archivedAt: { type: Date, default: null },
+    archivedBy: { type: Schema.Types.ObjectId, ref: 'Usuario', default: null },
   },
   { timestamps: true },
 )
 
-CancionSchema.index({ iglesiaId: 1, createdAt: -1 })
+CancionSchema.index({ iglesiaId: 1, archivedAt: 1, createdAt: -1 })
 CancionSchema.index({ iglesiaId: 1, titulo: 1 })
 CancionSchema.index({ iglesiaId: 1, artista: 1, titulo: 1 })
 CancionSchema.index({ iglesiaId: 1, tags: 1 })

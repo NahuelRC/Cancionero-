@@ -74,10 +74,10 @@ Prioridad: alta
     - Validar tono contra lista de tonalidades.
     - Validar bpm, compas, tags y posiciones de acordes.
 
-[ ] Mejorar mantenimiento del repertorio
+[x] Mejorar mantenimiento del repertorio
     - Duplicar cancion.
     - Archivar/restaurar cancion en lugar de solo eliminar.
-    - Opcional: historial de cambios por cancion.
+    - Opcional/diferido: historial de cambios por cancion.
 
 
 FASE 4 - EN VIVO PARA DEMO INTERNA
