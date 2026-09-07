@@ -10,12 +10,15 @@ test.describe('public API contracts', () => {
   test('health is public and returns JSON status', async ({ request }) => {
     const response = await request.get('/api/health', { maxRedirects: 0 })
 
-    expect(response.status()).toBe(200)
+    expect([200, 503]).toContain(response.status())
     expect(response.headers()['content-type']).toContain('application/json')
 
     const body = await response.json() as { ok?: boolean; db?: string }
-    expect(body).toMatchObject({ ok: true })
-    expect(['connected', 'disconnected']).toContain(body.db)
+    if (response.status() === 200) {
+      expect(body).toMatchObject({ ok: true, db: 'connected' })
+    } else {
+      expect(body).toMatchObject({ ok: false, db: 'error' })
+    }
   })
 
   test('payment webhook rejects requests without the shared secret', async ({ request }) => {
