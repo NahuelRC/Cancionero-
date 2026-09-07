@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   '/onboarding',
   '/api/auth',
   '/api/register',
+  '/api/health',
   '/api/invitaciones/aceptar',
   '/api/onboarding',
   '/api/payments/mercadopago',

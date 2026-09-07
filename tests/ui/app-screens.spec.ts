@@ -1,13 +1,16 @@
 import { expect, test, type Page } from '@playwright/test'
 
-const adminEmail = process.env.KLAVE_TEST_ADMIN_EMAIL ?? process.env.KLAVE_TEST_EMAIL ?? 'admin@demo.com'
-const adminPassword = process.env.KLAVE_TEST_ADMIN_PASSWORD ?? process.env.KLAVE_TEST_PASSWORD ?? 'Admin1234'
-const musicianEmail = process.env.KLAVE_TEST_MUSICIAN_EMAIL ?? 'musico@demo.com'
-const musicianPassword = process.env.KLAVE_TEST_MUSICIAN_PASSWORD ?? 'Musico1234'
-const multimediaEmail = process.env.KLAVE_TEST_MULTIMEDIA_EMAIL ?? 'multimedia@demo.com'
-const multimediaPassword = process.env.KLAVE_TEST_MULTIMEDIA_PASSWORD ?? 'Multimedia1234'
+const adminEmail = process.env.KLAVE_TEST_ADMIN_EMAIL ?? process.env.KLAVE_TEST_EMAIL
+const adminPassword = process.env.KLAVE_TEST_ADMIN_PASSWORD ?? process.env.KLAVE_TEST_PASSWORD
+const musicianEmail = process.env.KLAVE_TEST_MUSICIAN_EMAIL
+const musicianPassword = process.env.KLAVE_TEST_MUSICIAN_PASSWORD
+const multimediaEmail = process.env.KLAVE_TEST_MULTIMEDIA_EMAIL
+const multimediaPassword = process.env.KLAVE_TEST_MULTIMEDIA_PASSWORD
 const superAdminEmail = process.env.KLAVE_TEST_SUPER_ADMIN_EMAIL
 const superAdminPassword = process.env.KLAVE_TEST_SUPER_ADMIN_PASSWORD
+const hasAdminCredentials = Boolean(adminEmail && adminPassword)
+const hasMusicianCredentials = Boolean(musicianEmail && musicianPassword)
+const hasMultimediaCredentials = Boolean(multimediaEmail && multimediaPassword)
 
 type TestSong = {
   id: string
@@ -70,7 +73,8 @@ test.describe('authenticated application screens', () => {
   test.setTimeout(90_000)
 
   test('en vivo screen exposes session controls or waiting state for admin', async ({ page }) => {
-    await login(page, adminEmail, adminPassword)
+    test.skip(!hasAdminCredentials, 'Set KLAVE_TEST_ADMIN_EMAIL and KLAVE_TEST_ADMIN_PASSWORD to cover admin screens.')
+    await login(page, adminEmail!, adminPassword!)
     await page.goto('/en-vivo')
 
     await expect(page.getByRole('heading', { name: /En vivo|Culto|Sesion|Sesión/i })).toBeVisible()
@@ -82,7 +86,8 @@ test.describe('authenticated application screens', () => {
   })
 
   test('en vivo historial screen loads and links back to en vivo', async ({ page }) => {
-    await login(page, adminEmail, adminPassword)
+    test.skip(!hasAdminCredentials, 'Set KLAVE_TEST_ADMIN_EMAIL and KLAVE_TEST_ADMIN_PASSWORD to cover admin screens.')
+    await login(page, adminEmail!, adminPassword!)
     await page.goto('/en-vivo/historial')
 
     await expect(page.getByRole('heading', { name: /Historial/i })).toBeVisible()
@@ -94,7 +99,8 @@ test.describe('authenticated application screens', () => {
   })
 
   test('repertorio lists and filters songs', async ({ page }) => {
-    await login(page, adminEmail, adminPassword)
+    test.skip(!hasAdminCredentials, 'Set KLAVE_TEST_ADMIN_EMAIL and KLAVE_TEST_ADMIN_PASSWORD to cover admin screens.')
+    await login(page, adminEmail!, adminPassword!)
     const song = await createSong(page, 'QATES Repertorio')
 
     try {
@@ -110,7 +116,8 @@ test.describe('authenticated application screens', () => {
   })
 
   test('song detail screen renders metadata, lyrics, chords toolbar and actions', async ({ page }) => {
-    await login(page, adminEmail, adminPassword)
+    test.skip(!hasAdminCredentials, 'Set KLAVE_TEST_ADMIN_EMAIL and KLAVE_TEST_ADMIN_PASSWORD to cover admin screens.')
+    await login(page, adminEmail!, adminPassword!)
     const song = await createSong(page, 'QATES Detalle')
 
     try {
@@ -130,7 +137,8 @@ test.describe('authenticated application screens', () => {
   })
 
   test('edit song screen saves metadata changes', async ({ page }) => {
-    await login(page, adminEmail, adminPassword)
+    test.skip(!hasAdminCredentials, 'Set KLAVE_TEST_ADMIN_EMAIL and KLAVE_TEST_ADMIN_PASSWORD to cover admin screens.')
+    await login(page, adminEmail!, adminPassword!)
     const song = await createSong(page, 'QATES Editar')
     const updatedTitle = `${song.titulo} Actualizada`
 
@@ -152,7 +160,8 @@ test.describe('authenticated application screens', () => {
   })
 
   test('subir cancion screen processes manually written song text', async ({ page }) => {
-    await login(page, adminEmail, adminPassword)
+    test.skip(!hasAdminCredentials, 'Set KLAVE_TEST_ADMIN_EMAIL and KLAVE_TEST_ADMIN_PASSWORD to cover admin screens.')
+    await login(page, adminEmail!, adminPassword!)
     await page.goto('/subir')
 
     await expect(page.getByRole('heading', { name: /Subir canci/i })).toBeVisible()
@@ -166,7 +175,8 @@ test.describe('authenticated application screens', () => {
   })
 
   test('bulk upload screen validates unsupported file types', async ({ page }) => {
-    await login(page, adminEmail, adminPassword)
+    test.skip(!hasAdminCredentials, 'Set KLAVE_TEST_ADMIN_EMAIL and KLAVE_TEST_ADMIN_PASSWORD to cover admin screens.')
+    await login(page, adminEmail!, adminPassword!)
     await page.goto('/subir/bulk')
 
     await expect(page.getByRole('heading', { name: /Importar cancionero completo/i })).toBeVisible()
@@ -182,18 +192,20 @@ test.describe('authenticated application screens', () => {
   })
 
   test('usuarios screen lists tenant users and exposes invitation form', async ({ page }) => {
-    await login(page, adminEmail, adminPassword)
+    test.skip(!hasAdminCredentials, 'Set KLAVE_TEST_ADMIN_EMAIL and KLAVE_TEST_ADMIN_PASSWORD to cover admin screens.')
+    await login(page, adminEmail!, adminPassword!)
     await page.goto('/usuarios')
 
     await expect(page.getByRole('heading', { name: /Usuarios/i })).toBeVisible()
     await expect(page.getByPlaceholder('email@ejemplo.com')).toBeVisible()
     await expect(page.getByRole('button', { name: /Enviar invitaci/i })).toBeVisible()
-    await expect(page.getByText(adminEmail)).toBeVisible()
+    await expect(page.getByText(adminEmail!)).toBeVisible()
     await expect(page.getByText(/Administrador|Musico|Músico|Multimedia/i).first()).toBeVisible()
   })
 
   test('musician role can view repertorio and does not see user management navigation', async ({ page }) => {
-    await login(page, musicianEmail, musicianPassword)
+    test.skip(!hasMusicianCredentials, 'Set KLAVE_TEST_MUSICIAN_EMAIL and KLAVE_TEST_MUSICIAN_PASSWORD to cover musician screens.')
+    await login(page, musicianEmail!, musicianPassword!)
     await page.goto('/repertorio')
 
     await expect(page.getByRole('heading', { name: 'Repertorio', exact: true })).toBeVisible()
@@ -202,7 +214,8 @@ test.describe('authenticated application screens', () => {
   })
 
   test('multimedia role can view en vivo and does not see upload or user management navigation', async ({ page }) => {
-    await login(page, multimediaEmail, multimediaPassword)
+    test.skip(!hasMultimediaCredentials, 'Set KLAVE_TEST_MULTIMEDIA_EMAIL and KLAVE_TEST_MULTIMEDIA_PASSWORD to cover multimedia screens.')
+    await login(page, multimediaEmail!, multimediaPassword!)
     await page.goto('/en-vivo')
 
     await expect(page.getByRole('heading', { name: /En vivo|Culto|Sesion|Sesión/i })).toBeVisible()

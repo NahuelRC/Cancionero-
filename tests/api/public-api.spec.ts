@@ -19,7 +19,7 @@ test.describe('public API contracts', () => {
   })
 
   test('payment webhook rejects requests without the shared secret', async ({ request }) => {
-    const response = await request.post('/api/payments/webhook', {
+    const response = await request.post('/api/payments/mercadopago/webhook', {
       data: {
         eventId: 'evt_test_missing_secret',
         provider: 'test',
