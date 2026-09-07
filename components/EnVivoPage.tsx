@@ -35,6 +35,7 @@ export function EnVivoPage({ initialState, user }: Props) {
   const [song, setSong]             = useState<SongData>(null)
   const [loading, setLoading]       = useState(false)
   const [mobileTab, setMobileTab]   = useState<'set' | 'vista'>('set')
+  const [setPanelVisible, setSetPanelVisible] = useState(true)
 
   const isAdmin      = user.rol === 'ADMIN'
   const canNavigate  = user.rol !== 'MULTIMEDIA'
@@ -155,7 +156,14 @@ export function EnVivoPage({ initialState, user }: Props) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <PageHeader evState={evState} isAdmin={isAdmin} loading={loading} patch={patch} />
+      <PageHeader
+        evState={evState}
+        isAdmin={isAdmin}
+        loading={loading}
+        patch={patch}
+        setPanelVisible={setPanelVisible}
+        onToggleSetPanel={() => setSetPanelVisible((visible) => !visible)}
+      />
 
       {/* Mobile tab bar */}
       <div className="md:hidden flex border-b border-[#3a3f47]">
@@ -176,14 +184,16 @@ export function EnVivoPage({ initialState, user }: Props) {
 
       {/* Desktop layout */}
       <div className="hidden md:flex flex-1 overflow-hidden p-[18px_22px] gap-4">
-        <SetListPanel
-          evState={evState}
-          isAdmin={isAdmin}
-          canNavigate={canNavigate}
-          loading={loading}
-          patch={patch}
-          onSongSelected={() => setMobileTab('vista')}
-        />
+        {setPanelVisible && (
+          <SetListPanel
+            evState={evState}
+            isAdmin={isAdmin}
+            canNavigate={canNavigate}
+            loading={loading}
+            patch={patch}
+            onSongSelected={() => setMobileTab('vista')}
+          />
+        )}
         {viewerNode}
       </div>
 
@@ -213,12 +223,14 @@ export function EnVivoPage({ initialState, user }: Props) {
 // ─── Page header ──────────────────────────────────────────────────────────────
 
 function PageHeader({
-  evState, isAdmin, loading, patch,
+  evState, isAdmin, loading, patch, setPanelVisible, onToggleSetPanel,
 }: {
   evState: EnVivoState
   isAdmin: boolean
   loading: boolean
   patch: (op: object) => void
+  setPanelVisible?: boolean
+  onToggleSetPanel?: () => void
 }) {
   return (
     <div className="flex items-center justify-between px-[22px] py-4 border-b border-[#3a3f47]">
@@ -233,6 +245,16 @@ function PageHeader({
         </p>
       </div>
       <div className="flex items-center gap-3">
+        {evState.activo && onToggleSetPanel && (
+          <button
+            type="button"
+            onClick={onToggleSetPanel}
+            aria-expanded={setPanelVisible}
+            className="hidden md:inline-flex text-[12px] px-3 py-1.5 rounded-lg border border-[#3a3f47] text-[#8b9099] hover:text-[#f4f1e8] hover:border-[#8b9099] cursor-pointer"
+          >
+            {setPanelVisible ? 'Ocultar menú' : 'Mostrar menú'}
+          </button>
+        )}
         {evState.activo && (
           <span className="inline-flex items-center gap-1.5 bg-[#4f8a7b]/15 border border-[#4f8a7b]/40 text-[#4f8a7b] text-[10.5px] font-semibold px-[9px] py-[3px] rounded-full uppercase">
             <span className="w-1.5 h-1.5 rounded-full bg-[#4f8a7b]" />
