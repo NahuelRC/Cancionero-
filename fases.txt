@@ -26,7 +26,7 @@ Prioridad: critica
     - En modo demo, cada iglesia nueva arranca con repertorio inicial.
     - Las canciones demo permiten probar repertorio y En Vivo sin carga manual.
 
-[ ] Pulir primer uso despues del registro
+[x] Pulir primer uso despues del registro
     - Redirigir a /login?registered=1 o iniciar sesion automaticamente.
     - Agregar un estado vacio util cuando una iglesia nueva no tiene canciones.
 
@@ -39,11 +39,11 @@ Prioridad: alta
     - Si KLAVE_DEMO_MODE esta activo o falta RESEND_API_KEY, no falla el alta.
     - El admin ve el link de invitacion para copiarlo y compartirlo manualmente.
 
-[ ] Completar vista de invitaciones pendientes
+[x] Completar vista de invitaciones pendientes
     - Listar invitaciones PENDING por iglesia.
     - Mostrar email, rol, fecha de expiracion y estado.
 
-[ ] Agregar acciones sobre invitaciones
+[x] Agregar acciones sobre invitaciones
     - Reenviar invitacion.
     - Revocar invitacion.
     - Regenerar token si expiro.

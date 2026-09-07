@@ -30,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html
       lang="es"
       className={`${fraunces.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} h-full`}
+      suppressHydrationWarning
     >
       <body className="h-full">{children}</body>
     </html>

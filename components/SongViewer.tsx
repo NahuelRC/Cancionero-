@@ -59,8 +59,8 @@ export function SongViewer({ cancion, sinAcordes = false }: Props) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-4 md:px-[18px] pt-4 pb-[10px] border-b border-[#3a3f47]">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-serif font-bold text-[17px] m-0">{cancion.titulo}</h2>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h2 className="font-serif font-bold text-[17px] m-0 min-w-0 break-words">{cancion.titulo}</h2>
           {!sinAcordes && (
             <div className="flex gap-1 bg-[#262b33] border border-[#3a3f47] rounded-lg p-[3px]">
               <button
@@ -181,7 +181,8 @@ export function SongViewer({ cancion, sinAcordes = false }: Props) {
 
       {/* Lyrics */}
       <div
-        className="flex-1 overflow-y-auto px-4 md:px-[18px] py-[14px] pb-8"
+        data-testid="song-viewer-lyrics"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-[18px] py-[14px] pb-8 min-w-0"
         style={{ fontSize: `${scale}em` }}
       >
         {'secciones' in cancion && cancion.secciones.map((section, si) => (
@@ -201,7 +202,7 @@ export function SongViewer({ cancion, sinAcordes = false }: Props) {
                 )
               }
               return (
-                <div key={li} className="font-mono leading-[1.5] text-[#e7e4da] whitespace-pre">
+                <div key={li} className="font-mono leading-[1.5] text-[#e7e4da] whitespace-pre-wrap break-words [overflow-wrap:anywhere] sm:whitespace-pre sm:break-normal">
                   {line.text || ' '}
                 </div>
               )
@@ -222,20 +223,79 @@ function ChordLine({
   chords: Array<{ chord: string; position: number }>
   semitones: number
 }) {
+  const segments = buildChordSegments(text, chords)
+
   return (
-    <div className="relative pt-[15px] font-mono leading-[1.5] whitespace-pre">
-      {chords.map((c, i) => (
-        <span
-          key={i}
-          className="absolute top-[-1px] text-[#e8a33d] font-semibold text-[0.93em]"
-          style={{ left: `${c.position}ch` }}
-        >
-          {semitones !== 0 ? transposeChord(c.chord, semitones) : c.chord}
-        </span>
-      ))}
-      <span className="text-[#e7e4da]">{text || ' '}</span>
-    </div>
+    <>
+      <div className="relative pt-[15px] font-mono leading-[1.5] whitespace-pre hidden sm:block">
+        {chords.map((c, i) => (
+          <span
+            key={i}
+            className="absolute top-[-1px] text-[#e8a33d] font-semibold text-[0.93em]"
+            style={{ left: `${c.position}ch` }}
+          >
+            {semitones !== 0 ? transposeChord(c.chord, semitones) : c.chord}
+          </span>
+        ))}
+        <span className="text-[#e7e4da]">{text || ' '}</span>
+      </div>
+
+      <div className="sm:hidden font-mono leading-[1.5] flex flex-wrap items-end gap-x-[0.45ch] gap-y-1 min-w-0">
+        {segments.map((segment, i) => {
+          const content = segment.text || ' '
+          if (!segment.chord) {
+            return (
+              <span key={i} className="text-[#e7e4da] whitespace-pre-wrap break-words [overflow-wrap:anywhere] max-w-full">
+                {content}
+              </span>
+            )
+          }
+
+          return (
+            <span key={i} className="inline-flex flex-col max-w-full min-w-0">
+              <span className="text-[#e8a33d] font-semibold text-[0.93em] whitespace-nowrap">
+                {semitones !== 0 ? transposeChord(segment.chord, semitones) : segment.chord}
+              </span>
+              <span className="text-[#e7e4da] whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                {content}
+              </span>
+            </span>
+          )
+        })}
+      </div>
+    </>
   )
+}
+
+function buildChordSegments(
+  text: string,
+  chords: Array<{ chord: string; position: number }>,
+): Array<{ text: string; chord?: string }> {
+  const sorted = [...chords]
+    .filter((chord) => chord.position >= 0)
+    .sort((a, b) => a.position - b.position)
+
+  if (!sorted.length) return [{ text }]
+
+  const segments: Array<{ text: string; chord?: string }> = []
+  const firstPosition = Math.min(sorted[0].position, text.length)
+
+  if (firstPosition > 0) {
+    segments.push({ text: text.slice(0, firstPosition) })
+  }
+
+  sorted.forEach((chord, index) => {
+    const start = Math.min(chord.position, text.length)
+    const nextChord = sorted[index + 1]
+    const end = nextChord ? Math.min(nextChord.position, text.length) : text.length
+
+    segments.push({
+      chord: chord.chord,
+      text: text.slice(start, end) || ' ',
+    })
+  })
+
+  return segments
 }
 
 function MultimediaView({

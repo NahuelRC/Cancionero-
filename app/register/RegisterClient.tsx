@@ -62,7 +62,7 @@ export default function RegisterClient({
         return
       }
 
-      router.push('/login?registered=1')
+      router.push(`/login?registered=1&email=${encodeURIComponent(email.trim().toLowerCase())}`)
     } finally {
       setLoading(false)
     }

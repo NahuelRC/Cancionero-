@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireTenant } from '@/lib/dal'
-import { updateUsuarioRol, deactivateUsuario } from '@/services/usuarios'
+import { updateUsuarioPerfil, updateUsuarioRol, deactivateUsuario, reactivateUsuario } from '@/services/usuarios'
 import { logAction } from '@/lib/audit'
 import { toApiError } from '@/lib/errors'
 import { TENANT_USER_ROLES, normalizeRole } from '@/types'
 const PatchSchema = z.object({
+  nombre: z.string().min(2).max(100).trim().optional(),
+  email: z.string().email().optional(),
   rol: z.preprocess(
     (value) => typeof value === 'string' ? normalizeRole(value) : value,
     z.enum(TENANT_USER_ROLES),
@@ -32,9 +34,24 @@ export async function PATCH(
       return NextResponse.json({ ok: true, data: null })
     }
 
+    if (parsed.data.activo === true) {
+      const updated = await reactivateUsuario(user, id)
+      void logAction(user, 'usuario.reactivate', { id, type: 'Usuario' })
+      return NextResponse.json({ ok: true, data: updated })
+    }
+
     if (parsed.data.rol) {
       const updated = await updateUsuarioRol(user, id, parsed.data.rol)
       void logAction(user, 'usuario.rol_change', { id, type: 'Usuario', meta: { rol: parsed.data.rol } })
+      return NextResponse.json({ ok: true, data: updated })
+    }
+
+    if (parsed.data.nombre || parsed.data.email) {
+      const updated = await updateUsuarioPerfil(user, id, {
+        nombre: parsed.data.nombre,
+        email: parsed.data.email,
+      })
+      void logAction(user, 'usuario.update', { id, type: 'Usuario' })
       return NextResponse.json({ ok: true, data: updated })
     }
 

@@ -10,8 +10,9 @@ export default function LoginClient() {
   const searchParams = useSearchParams()
   const errorParam      = searchParams.get('error')
   const registeredParam = searchParams.get('registered')
+  const emailParam      = searchParams.get('email') ?? ''
 
-  const [email, setEmail]       = useState('')
+  const [email, setEmail]       = useState(emailParam)
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(
@@ -65,7 +66,7 @@ export default function LoginClient() {
 
         {registered && (
           <div className="mb-4 text-[12.5px] text-[#4f8a7b] bg-[#4f8a7b]/10 border border-[#4f8a7b]/30 rounded-lg px-3 py-2">
-            Cuenta creada. Iniciá sesión para continuar.
+            Iglesia creada. Iniciá sesión para entrar a la demo.
           </div>
         )}
         {error && (

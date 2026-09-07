@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Types } from 'mongoose'
+ import mongoose, { Document, Schema, Types } from 'mongoose'
 import type { SongSection, Tonalidad } from '@/types'
 
 export interface ICancion extends Document {

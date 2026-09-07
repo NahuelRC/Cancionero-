@@ -46,14 +46,41 @@ export async function updateUsuarioRol(
 
   await connectDB()
 
-  const doc = await Usuario.findOneAndUpdate(
-    { _id: targetId, iglesiaId: user.iglesiaId },
-    { $set: { rol: newRol } },
-    { new: true },
-  )
+  const target = await Usuario.findOne({ _id: targetId, iglesiaId: user.iglesiaId })
+  if (!target) throw new NotFoundError('Usuario')
 
-  if (!doc) throw new NotFoundError('Usuario')
-  return toDTO(doc)
+  const currentRol = normalizeRole(target.rol)
+  if (currentRol === 'ADMIN' && newRol !== 'ADMIN' && target.activo) {
+    const activeAdmins = await Usuario.countDocuments({ iglesiaId: user.iglesiaId, rol: { $in: ['ADMIN', 'admin'] }, activo: true })
+    if (activeAdmins <= 1) throw new ForbiddenError('La iglesia necesita al menos un ADMIN activo')
+  }
+
+  target.rol = newRol
+  await target.save()
+  return toDTO(target)
+}
+
+export async function updateUsuarioPerfil(
+  user: TenantSessionUser,
+  targetId: string,
+  data: { nombre?: string; email?: string },
+): Promise<UsuarioDTO> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+
+  await connectDB()
+
+  const target = await Usuario.findOne({ _id: targetId, iglesiaId: user.iglesiaId })
+  if (!target) throw new NotFoundError('Usuario')
+
+  if (data.email && data.email.toLowerCase() !== target.email) {
+    const exists = await Usuario.findOne({ iglesiaId: user.iglesiaId, email: data.email.toLowerCase(), _id: { $ne: targetId } })
+    if (exists) throw new ConflictError('Ya existe un usuario con ese email')
+    target.email = data.email.toLowerCase()
+  }
+
+  if (data.nombre) target.nombre = data.nombre
+  await target.save()
+  return toDTO(target)
 }
 
 export async function deactivateUsuario(user: TenantSessionUser, targetId: string): Promise<void> {
@@ -62,12 +89,31 @@ export async function deactivateUsuario(user: TenantSessionUser, targetId: strin
 
   await connectDB()
 
-  const result = await Usuario.updateOne(
-    { _id: targetId, iglesiaId: user.iglesiaId },
-    { $set: { activo: false } },
-  )
+  const target = await Usuario.findOne({ _id: targetId, iglesiaId: user.iglesiaId })
+  if (!target) throw new NotFoundError('Usuario')
 
-  if (result.matchedCount === 0) throw new NotFoundError('Usuario')
+  if (normalizeRole(target.rol) === 'ADMIN' && target.activo) {
+    const activeAdmins = await Usuario.countDocuments({ iglesiaId: user.iglesiaId, rol: { $in: ['ADMIN', 'admin'] }, activo: true })
+    if (activeAdmins <= 1) throw new ForbiddenError('La iglesia necesita al menos un ADMIN activo')
+  }
+
+  target.activo = false
+  target.status = 'DISABLED'
+  await target.save()
+}
+
+export async function reactivateUsuario(user: TenantSessionUser, targetId: string): Promise<UsuarioDTO> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+
+  await connectDB()
+
+  const target = await Usuario.findOne({ _id: targetId, iglesiaId: user.iglesiaId })
+  if (!target) throw new NotFoundError('Usuario')
+
+  target.activo = true
+  target.status = 'ACTIVE'
+  await target.save()
+  return toDTO(target)
 }
 
 export async function getOrCreateFromOAuth(opts: {

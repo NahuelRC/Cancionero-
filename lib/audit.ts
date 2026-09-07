@@ -8,10 +8,14 @@ type AuditAction =
   | 'cancion.create'
   | 'cancion.update'
   | 'usuario.rol_change'
+  | 'usuario.update'
   | 'usuario.deactivate'
+  | 'usuario.reactivate'
   | 'envivo.create'
   | 'envivo.stop'
   | 'invitacion.send'
+  | 'invitacion.resend'
+  | 'invitacion.revoke'
 
 interface IAuditLog extends Document {
   iglesiaId:  Types.ObjectId

@@ -5,7 +5,7 @@ import { Usuario } from '@/models/Usuario'
 import { Iglesia } from '@/models/Iglesia'
 import { ForbiddenError, NotFoundError, ConflictError } from '@/lib/errors'
 import { createSecureToken, hashSecureToken } from '@/lib/secure-tokens'
-import { isTenantRole, normalizeRole, type TenantSessionUser, type TenantUserRole } from '@/types'
+import { isTenantRole, normalizeRole, type InvitationStatus, type TenantSessionUser, type TenantUserRole } from '@/types'
 import { Resend } from 'resend'
 import { isInternalDemoMode } from '@/lib/demo-mode'
 
@@ -16,6 +16,38 @@ const FROM    = process.env.RESEND_FROM ?? 'Klave <no-reply@klave.app>'
 export interface InviteUsuarioResult {
   inviteUrl: string
   emailSent: boolean
+}
+
+export interface PendingInvitationDTO {
+  id: string
+  email: string
+  rol: TenantUserRole
+  status: InvitationStatus
+  expiresAt: string
+  createdAt: string
+}
+
+async function deliverInvitationEmail(
+  email: string,
+  rol: TenantUserRole,
+  inviteUrl: string,
+  iglesiaNombre?: string,
+): Promise<boolean> {
+  if (isInternalDemoMode() || !process.env.RESEND_API_KEY) return false
+
+  await getResend().emails.send({
+    from:    FROM,
+    to:      email,
+    subject: `Invitacion a ${iglesiaNombre ?? 'Klave'}`,
+    html: `
+      <p>Hola,</p>
+      <p>${iglesiaNombre ?? 'Una iglesia'} te invita a unirte a <strong>Klave</strong> como <strong>${rol}</strong>.</p>
+      <p><a href="${inviteUrl}">Aceptar invitacion</a></p>
+      <p>El link expira en 48 horas.</p>
+    `,
+  })
+
+  return true
 }
 
 export async function inviteUsuario(
@@ -68,6 +100,74 @@ export async function inviteUsuario(
   })
 
   return { inviteUrl, emailSent: true }
+}
+
+export async function listPendingInvitaciones(user: TenantSessionUser): Promise<PendingInvitationDTO[]> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+
+  await connectDB()
+
+  const now = new Date()
+  const docs = await Invitacion.find({
+    iglesiaId: user.iglesiaId,
+    status: 'PENDING',
+    usedAt: null,
+  }).sort({ createdAt: -1 })
+
+  return docs.map((doc) => ({
+    id: doc._id.toString(),
+    email: doc.email,
+    rol: normalizeRole(doc.rol) as TenantUserRole,
+    status: doc.expiresAt < now ? 'EXPIRED' : (doc.status ?? 'PENDING'),
+    expiresAt: doc.expiresAt.toISOString(),
+    createdAt: doc.createdAt.toISOString(),
+  }))
+}
+
+export async function regenerateInvitacion(user: TenantSessionUser, id: string): Promise<InviteUsuarioResult> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+
+  await connectDB()
+
+  const invitacion = await Invitacion.findOne({
+    _id: id,
+    iglesiaId: user.iglesiaId,
+    status: 'PENDING',
+    usedAt: null,
+  })
+  if (!invitacion) throw new NotFoundError('InvitaciÃ³n')
+
+  const exists = await Usuario.findOne({ iglesiaId: user.iglesiaId, email: invitacion.email })
+  if (exists) throw new ConflictError('El usuario ya existe en esta iglesia')
+
+  const rol = normalizeRole(invitacion.rol)
+  if (!isTenantRole(rol)) throw new ForbiddenError()
+
+  const token = createSecureToken()
+  invitacion.tokenHash = hashSecureToken(token)
+  invitacion.token = invitacion.tokenHash
+  invitacion.expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 48)
+  invitacion.status = 'PENDING'
+  await invitacion.save()
+
+  const iglesia = await Iglesia.findById(user.iglesiaId).lean()
+  const inviteUrl = `${APP_URL}/invitaciones/aceptar?token=${token}`
+  const emailSent = await deliverInvitationEmail(invitacion.email, rol, inviteUrl, iglesia?.nombre)
+
+  return { inviteUrl, emailSent }
+}
+
+export async function revokeInvitacion(user: TenantSessionUser, id: string): Promise<void> {
+  if (user.rol !== 'ADMIN') throw new ForbiddenError()
+
+  await connectDB()
+
+  const result = await Invitacion.updateOne(
+    { _id: id, iglesiaId: user.iglesiaId, status: 'PENDING', usedAt: null },
+    { $set: { status: 'REVOKED' } },
+  )
+
+  if (result.matchedCount === 0) throw new NotFoundError('InvitaciÃ³n')
 }
 
 export async function acceptInvitacion(

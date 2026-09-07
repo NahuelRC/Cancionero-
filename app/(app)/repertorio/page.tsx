@@ -21,6 +21,8 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
 
   const result = await listCanciones(user, { q, tags: tag ? [tag] : undefined, sort, page })
   const canDelete = user.rol === 'ADMIN'
+  const canUpload = user.rol !== 'MULTIMEDIA'
+  const hasActiveFilters = Boolean(q || tag)
 
   // Build a URL helper that preserves current filters
   function filterUrl(overrides: Record<string, string | undefined>) {
@@ -110,8 +112,26 @@ export default async function RepertorioPage({ searchParams }: { searchParams: P
           {(result.data as CancionDTO[]).map((c) => (
             <CancionCard key={c.id} cancion={c} activeTag={tag} canDelete={canDelete} />
           ))}
-          {result.data.length === 0 && (
+          {result.data.length === 0 && hasActiveFilters && (
             <p className="text-[13px] text-[#8b9099] col-span-full">No se encontraron canciones.</p>
+          )}
+          {result.data.length === 0 && !hasActiveFilters && (
+            <div className="col-span-full rounded-[10px] border border-[#3a3f47] bg-[#1c2026] px-4 py-5">
+              <h3 className="m-0 mb-1 text-[15px] font-medium text-[#f4f1e8]">Todavia no hay canciones</h3>
+              <p className="m-0 text-[13px] leading-5 text-[#8b9099]">
+                {canUpload
+                  ? 'Subi la primera cancion para empezar a armar el repertorio de la iglesia.'
+                  : 'Cuando un administrador cargue canciones, van a aparecer aca.'}
+              </p>
+              {canUpload && (
+                <Link
+                  href="/subir"
+                  className="mt-3 inline-flex px-[12px] py-[8px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[12.5px] no-underline"
+                >
+                  Subir cancion
+                </Link>
+              )}
+            </div>
           )}
         </div>
 
