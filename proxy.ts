@@ -1,5 +1,5 @@
 import { auth } from './lib/auth'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = [
   '/login',
@@ -14,19 +14,22 @@ const PUBLIC_PATHS = [
   '/api/payments/webhook',
 ]
 
-export default auth((req) => {
+export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
   if (isPublic) return NextResponse.next()
 
-  if (!req.auth) {
+  // Read the session without the auth wrapper's rolling Set-Cookie header.
+  // A pending API/stream response must not restore a cookie after logout.
+  const session = await auth()
+  if (!session) {
     const loginUrl = new URL('/login', req.url)
     return NextResponse.redirect(loginUrl)
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: [

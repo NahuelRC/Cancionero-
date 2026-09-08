@@ -50,6 +50,12 @@ test.describe('logout', () => {
       await expect(page).toHaveURL(user.landingPath)
       await expect(page.getByTitle(/Cerrar/i)).toBeVisible()
 
+      // Background responses must not renew a cookie that logout can clear
+      // while these requests are still in flight.
+      const liveResponse = await page.request.get('/api/envivo')
+      expect(liveResponse.ok()).toBe(true)
+      expect(liveResponse.headers()['set-cookie'] ?? '').not.toContain('authjs.session-token')
+
       const signoutResponse = page.waitForResponse((response) => (
         response.url().includes('/api/auth/signout') &&
         response.request().method() === 'POST'
@@ -59,6 +65,14 @@ test.describe('logout', () => {
 
       const response = await signoutResponse
       expect(response.ok()).toBe(true)
+      await expect(page).toHaveURL(/\/login$/)
+      await expectNoAuthenticatedSession(page)
+
+      expect((await page.context().cookies()).filter((cookie) => (
+        cookie.name.includes('authjs.session-token')
+      ))).toEqual([])
+
+      await page.reload()
       await expect(page).toHaveURL(/\/login$/)
       await expectNoAuthenticatedSession(page)
 
