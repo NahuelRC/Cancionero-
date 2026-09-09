@@ -7,6 +7,9 @@ import { Usuario } from '@/models/Usuario'
 import { normalizeEmail } from '@/lib/super-admin'
 import { normalizeRole } from '@/types'
 import { googleSignIn, resolveTenantUser, resolveSuperAdminUser, type UsuarioLean } from '@/services/auth-users'
+import { getGoogleConfig } from '@/lib/google-config'
+
+const googleConfig = getGoogleConfig()
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -48,9 +51,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
 
-    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? [Google({
-      clientId:     process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    ...(googleConfig.enabled ? [Google({
+      clientId:     googleConfig.clientId!,
+      clientSecret: googleConfig.clientSecret!,
     })] : []),
   ],
 

@@ -44,7 +44,8 @@ export default function RegisterClient({ googleEnabled }: { googleEnabled: boole
         <h1 className="text-xl text-[#f4f1e8] mt-3">Creá tu cuenta</h1>
         <p className="text-sm text-[#8b9099] mt-2 mb-5">Después completás los datos de tu iglesia y contratás la suscripción mensual. Crear tu cuenta no genera ningún cobro.</p>
         {error && <p role="alert" className="text-sm text-[#d9694f] mb-4">{error}</p>}
-        {googleEnabled && <button type="button" disabled={loading} onClick={google} className={buttonCls + ' mb-5'}>Registrarme con Google</button>}
+        <button type="button" disabled={loading || !googleEnabled} onClick={google} title={!googleEnabled ? 'Configurá AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en .env.local' : undefined} className={buttonCls + ' mb-2'}>{googleEnabled ? 'Registrarme con Google' : 'Google (configuración pendiente)'}</button>
+        {!googleEnabled && <p className="text-center text-xs text-[#8b9099] mb-4">Agregá las credenciales de Google en `.env.local` para habilitar este botón.</p>}
         <form onSubmit={register} className="flex flex-col gap-3">
           <label className={labelCls}>Tu nombre<input autoComplete="name" required minLength={2} maxLength={100} value={nombre} onChange={(e) => setNombre(e.target.value)} className={inputCls} /></label>
           <label className={labelCls}>Email<input autoComplete="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} /></label>

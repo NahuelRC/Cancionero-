@@ -15,11 +15,7 @@ test.describe('public page functional smoke', () => {
     await expect(page.getByLabel('Email')).toBeVisible()
     await expect(page.locator('input[type="password"]')).toBeVisible()
     await expect(page.getByRole('button', { name: /Iniciar/i })).toBeVisible()
-    if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
-      await expect(page.getByRole('button', { name: /Google/i })).toBeVisible()
-    } else {
-      await expect(page.getByRole('button', { name: /Google/i })).toBeHidden()
-    }
+    await expect(page.getByRole('button', { name: /Google/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /Ver planes/i })).toHaveAttribute('href', '/register')
   })
 

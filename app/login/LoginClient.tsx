@@ -115,25 +115,25 @@ export default function LoginClient({ googleEnabled }: Props) {
           </button>
         </form>
 
-        {googleEnabled && (
-          <>
-            <div className="flex items-center gap-[10px] my-4 text-[#8b9099] text-[11px]">
-              <span className="flex-1 h-px bg-[#3a3f47]" />
-              o
-              <span className="flex-1 h-px bg-[#3a3f47]" />
-            </div>
+        <>
+          <div className="flex items-center gap-[10px] my-4 text-[#8b9099] text-[11px]">
+            <span className="flex-1 h-px bg-[#3a3f47]" />
+            o
+            <span className="flex-1 h-px bg-[#3a3f47]" />
+          </div>
 
-            <button
-              type="button"
-              onClick={handleGoogle}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-[10px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13.5px] cursor-pointer hover:bg-[#2e333b] disabled:opacity-60"
-            >
-              <GoogleIcon />
-              Continuar con Google
-            </button>
-          </>
-        )}
+          <button
+            type="button"
+            onClick={handleGoogle}
+            disabled={loading || !googleEnabled}
+            title={!googleEnabled ? 'Configurá AUTH_GOOGLE_ID y AUTH_GOOGLE_SECRET en .env.local' : undefined}
+            className="w-full flex items-center justify-center gap-2 py-[10px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13.5px] cursor-pointer hover:bg-[#2e333b] disabled:opacity-60"
+          >
+            <GoogleIcon />
+            {googleEnabled ? 'Continuar con Google' : 'Google (configuración pendiente)'}
+          </button>
+          {!googleEnabled && <p className="text-center text-[11px] text-[#8b9099] mt-2">En desarrollo: agregá tus credenciales de Google para habilitarlo.</p>}
+        </>
 
         <p className="text-center text-[12px] text-[#8b9099] mt-4">
           ¿Administrador sin cuenta de iglesia?{' '}
