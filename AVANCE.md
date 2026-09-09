@@ -41,3 +41,23 @@
 3. Integrar `fix/logout-session-redirect` y verificar el despliegue en Render. No se realizó merge ni se verificó ese despliegue en esta sesión.
 
 No se encontró en el repositorio un roadmap de producto por fases; esta lista describe los pendientes de la entrega actual.
+
+## Rama feature/google-signup-mercadopago
+
+- Cuenta Super Admin configurada en la base de datos para `nahuel.muruga@hotmail.com`; la contraseña se guardó únicamente como hash y no se incluyó en archivos ni logs.
+- La lista autorizada de Super Admin conserva `nahuelrc90@gmail.com` y agrega `nahuel.muruga@hotmail.com` en `config/super-admin.json`.
+- El registro por email crea solo una cuenta ADMIN pendiente, sin iglesia ni acceso, y conduce a `/onboarding`.
+- Google OAuth crea o vincula una cuenta ADMIN pendiente; exige `email_verified === true`, evita reactivar cuentas deshabilitadas y no habilita una iglesia sin pago.
+- El onboarding solicita nombre y slug de iglesia y crea una suscripción mensual pendiente en Mercado Pago. La iglesia se habilita solamente después de una factura cuyo pago coincide en suscripción, vendedor, monto, moneda, modo live y estado aprobado.
+- El webhook de Mercado Pago valida `x-signature` con HMAC y `x-request-id`, usa consultas idempotentes y procesa renovaciones, reembolsos y cancelaciones sin extender períodos fuera de orden.
+- El flujo de pagos permanece desactivado hasta definir `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `MERCADOPAGO_COLLECTOR_ID`, `MERCADOPAGO_MONTHLY_PRICE`, `MERCADOPAGO_LIVE_MODE` y una `NEXT_PUBLIC_APP_URL` HTTPS.
+- El callback de Google para configurar en Google Cloud es `/api/auth/callback/google`.
+- `npm run test:integration`: 12 pruebas pasan con MongoDB temporal. `npx tsc --noEmit --incremental false`, `npx eslint .`, `npm run build` y 4 pruebas visibles de Chrome para páginas públicas también pasan.
+- Dependencias nuevas: `server-only`, `tsx` y `mongodb-memory-server` para aislar la suite de integración.
+
+## Pendientes para activar suscripciones
+
+1. Definir el precio mensual en ARS y cargar las credenciales de Google OAuth y Mercado Pago en Render.
+2. Registrar en Mercado Pago el webhook HTTPS `/api/payments/mercadopago/webhook` para los eventos de suscripción y pagos.
+3. Ejecutar una suscripción con cuentas de prueba de Mercado Pago y confirmar el primer pago, una renovación, un reembolso y una cancelación.
+4. Revisar y fusionar `feature/google-signup-mercadopago` a la rama de producción; el código todavía no activa cobros mientras faltan las variables anteriores.

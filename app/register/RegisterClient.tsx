@@ -1,192 +1,61 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 
-interface Props {
-  directRegisterEnabled: boolean
-  checkoutUrl: string | null
-}
+export default function RegisterClient({ googleEnabled }: { googleEnabled: boolean }) {
+  const [nombre, setNombre] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-}
-
-export default function RegisterClient({ directRegisterEnabled, checkoutUrl }: Props) {
-  const router = useRouter()
-
-  const [iglesiaName, setIglesiaName] = useState('')
-  const [slug, setSlug]               = useState('')
-  const [slugManual, setSlugManual]   = useState(false)
-  const [nombre, setNombre]           = useState('')
-  const [email, setEmail]             = useState('')
-  const [password, setPassword]       = useState('')
-  const [loading, setLoading]         = useState(false)
-  const [error, setError]             = useState<string | null>(null)
-
-  function handleIglesiaNameChange(val: string) {
-    setIglesiaName(val)
-    if (!slugManual) setSlug(slugify(val))
+  async function register(event: React.FormEvent) {
+    event.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, email, password }),
+      })
+      const body = await response.json()
+      if (!response.ok) { setError(body.message ?? 'No pudimos crear tu cuenta'); return }
+      const result = await signIn('credentials', { email, password, redirect: false })
+      window.location.assign(result?.ok && !result.error ? '/onboarding' : '/login?registered=1')
+    } catch {
+      setError('No pudimos conectar. Intentá nuevamente; si tu cuenta ya se creó, iniciá sesión.')
+    } finally { setLoading(false) }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
+  async function google() {
     setLoading(true)
-
-    try {
-      const res  = await fetch('/api/register', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ iglesiaName, slug, nombre, email, password }),
-      })
-      const json = await res.json()
-
-      if (!json.ok) {
-        setError(json.message ?? 'Error al crear la cuenta')
-        return
-      }
-
-      router.push('/login?registered=1')
-    } finally {
-      setLoading(false)
-    }
+    setError(null)
+    try { await signIn('google', { redirectTo: '/' }) }
+    catch { setError('No pudimos iniciar el registro con Google. Intentá nuevamente.') }
+    finally { setLoading(false) }
   }
 
   return (
-    <div className="min-h-full flex items-center justify-center bg-[#0b0c0e] py-10">
-      <div className="w-[380px] bg-[#1c2026] border border-[#3a3f47] rounded-[14px] p-[30px_26px]">
-        <div className="font-serif font-bold text-[22px] text-[#e8a33d] mb-1">Klave</div>
-        <p className="text-[12.5px] text-[#8b9099] mb-5">Contratá un plan para crear tu iglesia</p>
-
-        {error && (
-          <div className="mb-4 text-[12.5px] text-[#d9694f] bg-[#d9694f]/10 border border-[#d9694f]/30 rounded-lg px-3 py-2">
-            {error}
-          </div>
-        )}
-
-        {!directRegisterEnabled ? (
-          <div className="flex flex-col gap-3">
-            <p className="text-[13px] text-[#c9cdd3] leading-5">
-              Para crear una nueva iglesia primero necesitás contratar un plan.
-            </p>
-            {checkoutUrl ? (
-              <Link
-                href={checkoutUrl}
-                className="mt-1 w-full text-center py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px]"
-              >
-                Ver planes
-              </Link>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="mt-1 w-full py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px] opacity-60"
-              >
-                Planes no disponibles
-              </button>
-            )}
-          </div>
-        ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-
-          {/* ── Iglesia ────────────────────────────────────── */}
-          <div className="text-[11px] font-medium text-[#8b9099] uppercase tracking-wider mt-1 mb-0.5">
-            Tu iglesia
-          </div>
-
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Nombre de la iglesia</span>
-            <input
-              value={iglesiaName}
-              onChange={(e) => handleIglesiaNameChange(e.target.value)}
-              placeholder="Iglesia Nueva Vida"
-              required
-              className={inputCls}
-            />
-          </label>
-
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">
-              Slug (URL de acceso){' '}
-              <span className="text-[#3a3f47] font-mono">klave.app/<span className="text-[#e8a33d]">{slug || '…'}</span></span>
-            </span>
-            <input
-              value={slug}
-              onChange={(e) => { setSlug(e.target.value.toLowerCase()); setSlugManual(true) }}
-              placeholder="iglesia-nueva-vida"
-              required
-              pattern="[a-z0-9-]+"
-              title="Solo letras minúsculas, números y guiones"
-              className={inputCls + ' font-mono'}
-            />
-            <span className="text-[11px] text-[#8b9099]">Solo letras minúsculas, números y guiones</span>
-          </label>
-
-          {/* ── Administrador ──────────────────────────────── */}
-          <div className="text-[11px] font-medium text-[#8b9099] uppercase tracking-wider mt-2 mb-0.5">
-            Tu cuenta de administrador
-          </div>
-
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Tu nombre</span>
-            <input
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="María García"
-              required
-              className={inputCls}
-            />
-          </label>
-
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="maria@iglesia.org"
-              required
-              className={inputCls}
-            />
-          </label>
-
-          <label className="flex flex-col gap-[5px]">
-            <span className="text-[12px] text-[#8b9099]">Contraseña (mín. 8 caracteres)</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className={inputCls}
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={loading || !slug}
-            className="mt-2 w-full py-[10px] rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-[13.5px] cursor-pointer disabled:opacity-60"
-          >
-            {loading ? 'Creando cuenta…' : 'Crear iglesia y cuenta admin'}
-          </button>
+    <div className="min-h-full flex items-center justify-center bg-[#0b0c0e] px-4 py-10">
+      <div className="w-full max-w-[400px] bg-[#1c2026] border border-[#3a3f47] rounded-[14px] p-7">
+        <div className="font-serif font-bold text-[22px] text-[#e8a33d]">Klave</div>
+        <h1 className="text-xl text-[#f4f1e8] mt-3">Creá tu cuenta</h1>
+        <p className="text-sm text-[#8b9099] mt-2 mb-5">Después completás los datos de tu iglesia y contratás la suscripción mensual. Crear tu cuenta no genera ningún cobro.</p>
+        {error && <p role="alert" className="text-sm text-[#d9694f] mb-4">{error}</p>}
+        {googleEnabled && <button type="button" disabled={loading} onClick={google} className={buttonCls + ' mb-5'}>Registrarme con Google</button>}
+        <form onSubmit={register} className="flex flex-col gap-3">
+          <label className={labelCls}>Tu nombre<input autoComplete="name" required minLength={2} maxLength={100} value={nombre} onChange={(e) => setNombre(e.target.value)} className={inputCls} /></label>
+          <label className={labelCls}>Email<input autoComplete="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} /></label>
+          <label className={labelCls}>Contraseña (mín. 8 caracteres)<input autoComplete="new-password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} /></label>
+          <button type="submit" disabled={loading} className={buttonCls}>{loading ? 'Creando cuenta…' : 'Crear cuenta'}</button>
         </form>
-        )}
-
-        <p className="text-center text-[12px] text-[#8b9099] mt-4">
-          ¿Ya tenés cuenta?{' '}
-          <Link href="/login" className="text-[#4f8a7b]">Iniciar sesión</Link>
-        </p>
+        <p className="text-center text-sm text-[#8b9099] mt-5">¿Ya tenés cuenta? <Link href="/login" className="text-[#4f8a7b]">Iniciar sesión</Link></p>
       </div>
     </div>
   )
 }
-
-const inputCls = 'w-full px-[10px] py-[9px] rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] text-[13.5px] outline-none focus:border-[#e8a33d]'
+const inputCls = 'w-full mt-1 px-3 py-2 rounded-lg border border-[#3a3f47] bg-[#262b33] text-[#f4f1e8] outline-none focus:border-[#e8a33d]'
+const labelCls = 'text-sm text-[#8b9099]'
+const buttonCls = 'w-full py-3 px-3 rounded-lg bg-[#e8a33d] text-[#2b1b04] font-medium text-sm cursor-pointer disabled:opacity-60'

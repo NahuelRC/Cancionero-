@@ -13,6 +13,7 @@ export interface IIglesia extends Document {
   estadoSuscripcion: 'activa' | 'prueba' | 'vencida'
   status?: OrganizationStatus
   subscriptionStatus?: SubscriptionStatus
+  subscriptionPaidThrough?: Date
   logoUrl?: string
   createdAt: Date
   updatedAt: Date
@@ -26,6 +27,7 @@ const IglesiaSchema = new Schema<IIglesia>(
     estadoSuscripcion: { type: String, enum: ['activa', 'prueba', 'vencida'], default: 'activa' },
     status:            { type: String, enum: ORGANIZATION_STATUS, default: 'ACTIVE' },
     subscriptionStatus: { type: String, enum: SUBSCRIPTION_STATUS, default: 'ACTIVE' },
+    subscriptionPaidThrough: Date,
     logoUrl:           String,
   },
   { timestamps: true },

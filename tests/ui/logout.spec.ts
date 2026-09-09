@@ -1,6 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const users = [
+  ...(process.env.KLAVE_TEST_SUPER_ADMIN_EMAIL && process.env.KLAVE_TEST_SUPER_ADMIN_PASSWORD ? [{
+    role: 'SuperAdmin', email: process.env.KLAVE_TEST_SUPER_ADMIN_EMAIL,
+    password: process.env.KLAVE_TEST_SUPER_ADMIN_PASSWORD, landingPath: /\/super-admin$/,
+  }] : []),
   {
     role: 'Admin',
     email: process.env.KLAVE_TEST_ADMIN_EMAIL ?? process.env.KLAVE_TEST_EMAIL ?? 'admin@demo.com',
@@ -43,25 +47,28 @@ async function expectNoAuthenticatedSession(page: Page) {
 
 test.describe('logout', () => {
   for (const user of users) {
-    test(`desktop sidebar logout signs out ${user.role}`, async ({ page }) => {
+    test(`logout signs out ${user.role}`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 720 })
       await login(page, user.email, user.password)
 
       await expect(page).toHaveURL(user.landingPath)
-      await expect(page.getByTitle(/Cerrar/i)).toBeVisible()
+      const logoutButton = page.getByRole('button', { name: 'Cerrar sesión', exact: true })
+      await expect(logoutButton).toBeVisible()
 
       // Background responses must not renew a cookie that logout can clear
       // while these requests are still in flight.
-      const liveResponse = await page.request.get('/api/envivo')
-      expect(liveResponse.ok()).toBe(true)
-      expect(liveResponse.headers()['set-cookie'] ?? '').not.toContain('authjs.session-token')
+      if (user.role !== 'SuperAdmin') {
+        const liveResponse = await page.request.get('/api/envivo')
+        expect(liveResponse.ok()).toBe(true)
+        expect(liveResponse.headers()['set-cookie'] ?? '').not.toContain('authjs.session-token')
+      }
 
       const signoutResponse = page.waitForResponse((response) => (
         response.url().includes('/api/auth/signout') &&
         response.request().method() === 'POST'
       ))
 
-      await page.getByTitle(/Cerrar/i).click()
+      await logoutButton.click()
 
       const response = await signoutResponse
       expect(response.ok()).toBe(true)
@@ -76,7 +83,7 @@ test.describe('logout', () => {
       await expect(page).toHaveURL(/\/login$/)
       await expectNoAuthenticatedSession(page)
 
-      await page.goto('/en-vivo')
+      await page.goto(user.role === 'SuperAdmin' ? '/super-admin' : '/en-vivo')
       await expect(page).toHaveURL(/\/login$/)
     })
   }

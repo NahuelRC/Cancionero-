@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   '/api/invitaciones/aceptar',
   '/api/onboarding',
   '/api/payments/webhook',
+  '/api/payments/mercadopago/webhook',
 ]
 
 export default async function proxy(req: NextRequest) {
@@ -33,6 +34,6 @@ export default async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!login|register|onboarding|api/auth|api/register|api/health|api/invitaciones/aceptar|api/onboarding|api/payments/webhook|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!login|register|onboarding|api/auth|api/register|api/health|api/invitaciones/aceptar|api/onboarding|api/payments/webhook|api/payments/mercadopago/webhook|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

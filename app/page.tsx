@@ -7,6 +7,7 @@ export default async function RootPage() {
   if (session?.user) {
     const role = normalizeRole((session.user as SessionUser).rol)
     if (role === 'SUPER_ADMIN') redirect('/super-admin')
+    if (session.user.onboardingStatus === 'PENDING') redirect('/onboarding')
     redirect('/en-vivo')
   } else {
     redirect('/login')

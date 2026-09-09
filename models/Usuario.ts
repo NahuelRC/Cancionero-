@@ -28,7 +28,7 @@ const UsuarioSchema = new Schema<IUsuario>(
       type: Schema.Types.ObjectId,
       ref: 'Iglesia',
       required(this: IUsuario) {
-        return this.rol !== 'SUPER_ADMIN'
+        return this.rol !== 'SUPER_ADMIN' && this.onboardingStatus !== 'PENDING'
       },
       default: null,
     },

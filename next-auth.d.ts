@@ -9,6 +9,7 @@ declare module '@auth/core/types' {
       rol: UserRole
       iglesiaId?: string | null
       iglesiaSlug?: string | null
+      onboardingStatus?: 'PENDING' | 'COMPLETED'
     }
   }
 
@@ -19,6 +20,7 @@ declare module '@auth/core/types' {
     rol: UserRole
     iglesiaId?: string | null
     iglesiaSlug?: string | null
+    onboardingStatus?: 'PENDING' | 'COMPLETED'
   }
 }
 
@@ -29,5 +31,6 @@ declare module '@auth/core/jwt' {
     rol: UserRole
     iglesiaId?: string | null
     iglesiaSlug?: string | null
+    onboardingStatus?: 'PENDING' | 'COMPLETED'
   }
 }

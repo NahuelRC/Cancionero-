@@ -23,16 +23,17 @@ test.describe('public page functional smoke', () => {
     await expect(page.getByRole('link', { name: /Ver planes/i })).toHaveAttribute('href', '/register')
   })
 
-  test('register exposes either the signup form or the payment gate', async ({ page }) => {
+  test('register exposes account creation before the monthly subscription', async ({ page }) => {
     await page.goto('/register')
 
     await expect(page.getByText('Klave').first()).toBeVisible()
 
-    const createButton = page.getByRole('button', { name: /Crear iglesia/i })
-    const unavailableButton = page.getByRole('button', { name: /Planes no disponibles/i })
-    const plansLink = page.getByRole('link', { name: /Ver planes/i })
-
-    await expect(createButton.or(unavailableButton).or(plansLink)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Crear cuenta', exact: true })).toBeVisible()
+    await expect(page.getByLabel('Tu nombre')).toBeVisible()
+    await expect(page.getByText(/Crear tu cuenta no genera ningún cobro/)).toBeVisible()
+    if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
+      await expect(page.getByRole('button', { name: 'Registrarme con Google' })).toBeVisible()
+    }
     await expect(page.getByRole('link', { name: /Iniciar/i })).toHaveAttribute('href', '/login')
   })
 

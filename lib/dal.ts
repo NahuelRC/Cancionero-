@@ -19,6 +19,7 @@ import { UnauthorizedError, ForbiddenError } from './errors'
 export const verifySession = cache(async (): Promise<TenantSessionUser> => {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  if (session.user.onboardingStatus === 'PENDING') redirect('/onboarding')
 
   try {
     return await assertTenantAccess(session.user as SessionUser)
@@ -98,7 +99,7 @@ async function assertTenantAccess(
     ).lean(),
     Iglesia.findById(
       sessionUser.iglesiaId,
-      'slug status estadoSuscripcion subscriptionStatus',
+      'slug status estadoSuscripcion subscriptionStatus subscriptionPaidThrough',
     ).lean(),
   ])
 
@@ -125,7 +126,8 @@ async function assertTenantAccess(
 
   if (
     iglesia.subscriptionStatus && iglesia.subscriptionStatus !== 'ACTIVE' ||
-    iglesia.estadoSuscripcion === 'vencida'
+    iglesia.estadoSuscripcion === 'vencida' ||
+    (iglesia.subscriptionPaidThrough && iglesia.subscriptionPaidThrough <= new Date())
   ) {
     throw new ForbiddenError('SUBSCRIPTION_INACTIVE')
   }
