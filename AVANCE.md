@@ -61,3 +61,18 @@ No se encontró en el repositorio un roadmap de producto por fases; esta lista d
 2. Registrar en Mercado Pago el webhook HTTPS `/api/payments/mercadopago/webhook` para los eventos de suscripción y pagos.
 3. Ejecutar una suscripción con cuentas de prueba de Mercado Pago y confirmar el primer pago, una renovación, un reembolso y una cancelación.
 4. Revisar y fusionar `feature/google-signup-mercadopago` a la rama de producción; el código todavía no activa cobros mientras faltan las variables anteriores.
+
+## Próxima sesión
+
+1. Terminar la configuración de Google Cloud OAuth:
+   - Configurar la pantalla de consentimiento.
+   - Crear un cliente OAuth de tipo aplicación web.
+   - Agregar `http://localhost:3000/api/auth/callback/google`.
+   - Cargar `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET` en `.env.local`.
+   - Probar registro e inicio de sesión con Google.
+2. Terminar la configuración de Mercado Pago:
+   - Definir el precio mensual en ARS.
+   - Cargar `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET` y `MERCADOPAGO_COLLECTOR_ID`.
+   - Configurar `MERCADOPAGO_LIVE_MODE` y `NEXT_PUBLIC_APP_URL`.
+   - Registrar `/api/payments/mercadopago/webhook` en Mercado Pago.
+   - Probar suscripción, primer pago aprobado, renovación, reembolso y cancelación con cuentas de prueba.
